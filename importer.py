@@ -1,6 +1,6 @@
 import pandas as pd
 
-def read_json_file(file_path: str = 'a3-celestial-guardians.json') -> pd.DataFrame:
+def read_json_file(file_path: str = 'sets/a3-celestial-guardians.json') -> pd.DataFrame:
     df = pd.read_json(file_path)
     return df
 
