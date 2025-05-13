@@ -14,23 +14,25 @@ class DataFrameViewer(tk.Tk):
         super().__init__()
         self.title("DataFrame Viewer")
         self.geometry("1300x900")
-        # Replace None in 'pack' column with 'Both'
+        
         if 'pack' in dataframe.columns:
             dataframe['pack'] = dataframe['pack'].where(dataframe['pack'].notna(), 'Both')
+
         self.df = dataframe
-        self.set = set()  # Store indices of cards in the set (for set completion)
+        self.set = set()  
         self.group_var = tk.StringVar(self)
         self.group_var.set(self.df.columns[0])
         self.groups = None
         self.current_group = None
-        self.inventory = set()  # Store indices of cards in inventory
-        self.checkbox_vars = {}  # Map tree item id to IntVar
+        self.inventory = set()  
+        self.checkbox_vars = {}  
         self.set_completion_rarities = ["Common", "Uncommon", "Rare", "Rare EX"]
         self.create_menu()
         self.create_widgets()
         self.show_dataframe(self.df)
 
     def create_menu(self):
+
         menubar = tk.Menu(self)
         filemenu = tk.Menu(menubar, tearoff=0)
         filemenu.add_command(label="Import JSON", command=self.import_json)
@@ -40,6 +42,7 @@ class DataFrameViewer(tk.Tk):
         self.config(menu=menubar)
 
     def import_json(self):
+
         file_paths = filedialog.askopenfilenames(
             defaultextension=".json",
             filetypes=[("JSON Files", "*.json"), ("All Files", "*.*")]
@@ -62,6 +65,7 @@ class DataFrameViewer(tk.Tk):
                 self.show_dataframe(self.df)
 
     def save_progress(self):
+
         file_path = filedialog.asksaveasfilename(defaultextension=".pif", filetypes=[("Pokemon Inventory Files", "*.pif"), ("All Files", "*.*")])
         if file_path:
             try:
@@ -72,6 +76,7 @@ class DataFrameViewer(tk.Tk):
                 tk.messagebox.showerror("Error", f"Failed to save progress:\n{e}")
 
     def load_progress(self):
+
         file_path = filedialog.askopenfilename(defaultextension=".pif", filetypes=[("Pokemon Inventory Files", "*.pif"), ("All Files", "*.*")])
         if file_path:
             try:
@@ -86,7 +91,7 @@ class DataFrameViewer(tk.Tk):
                                 idx = line
                             indices.add(idx)
                     self.inventory = indices
-                # Refresh the view
+
                 if self.groups:
                     self.on_group_change(self.group_var.get())
                 else:
@@ -95,7 +100,7 @@ class DataFrameViewer(tk.Tk):
                 tk.messagebox.showerror("Error", f"Failed to load progress:\n{e}")
 
     def create_widgets(self):
-        # Top frame for controls
+        
         top_frame = tk.Frame(self)
         top_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
 
@@ -105,26 +110,26 @@ class DataFrameViewer(tk.Tk):
         group_menu.pack(side=tk.LEFT, padx=5)
         group_menu.bind("<<ComboboxSelected>>", lambda e: self.on_group_change(self.group_var.get()))
 
-        # --- Tabs for All Inventory and Set Completion ---
+        
         self.tab_control = ttk.Notebook(self)
         self.tab_control.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
-        # Tab 1: All Inventory
+        
         self.tab_all = tk.Frame(self.tab_control)
         self.tab_control.add(self.tab_all, text="All Inventory")
 
-        # Tab 2: Set Completion
+        
         self.tab_set = tk.Frame(self.tab_control)
         self.tab_control.add(self.tab_set, text="Set Completion Only")
 
-        # Main frame for Treeview, details, and pie chart (for both tabs)
+        
         self.main_frames = {}
         for tab, is_set in [(self.tab_all, False), (self.tab_set, True)]:
             main_frame = tk.Frame(tab)
             main_frame.pack(fill=tk.BOTH, expand=True)
             self.main_frames[tab] = main_frame
 
-            # Treeview for displaying grouped items or dataframe
+            
             columns = ["Inventory"] + list(self.df.columns)
             tree = ttk.Treeview(main_frame, columns=columns, show="headings", selectmode="browse")
             tree.heading("Inventory", text="✓")
@@ -140,16 +145,13 @@ class DataFrameViewer(tk.Tk):
             else:
                 self.tree = tree
 
-            # Scrollbar for Treeview
             scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=tree.yview)
             tree.configure(yscroll=scrollbar.set)
             scrollbar.pack(side=tk.LEFT, fill=tk.Y)
 
-            # Right frame for pie chart and pack suggestion
             right_frame = tk.Frame(main_frame)
             right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10)
 
-            # Pie chart area
             pie_frame = tk.LabelFrame(right_frame, text="Pie Chart", padx=10, pady=10)
             pie_frame.pack(fill=tk.BOTH, expand=False, pady=5)
             if is_set:
@@ -159,7 +161,6 @@ class DataFrameViewer(tk.Tk):
                 self.pie_frame = pie_frame
                 self.pie_canvas = None
 
-            # Pack suggestion area
             suggestion_frame = tk.LabelFrame(right_frame, text="Which pack should you open?", padx=10, pady=10)
             suggestion_frame.pack(fill=tk.BOTH, expand=False, pady=5)
             suggestion_label = tk.Label(suggestion_frame, text="", font=("Arial", 12, "bold"), fg="#1565c0")
@@ -169,52 +170,44 @@ class DataFrameViewer(tk.Tk):
             else:
                 self.suggestion_label = suggestion_label
 
-        # --- Bottom Section Split: Set Completion/Set Pack Completion (Left) and Inventory (Right) ---
         bottom_main_frame = tk.Frame(self)
         bottom_main_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=5)
 
-        # Left: Set Completion and Set Pack Completion
         set_frame = tk.Frame(bottom_main_frame)
         set_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
 
-        # Set Completion
         set_completion_frame = tk.LabelFrame(set_frame, text="Set Completion", padx=10, pady=10, bg="#e8f5e9", fg="#1b5e20", labelanchor="n")
         set_completion_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=False, padx=2, pady=2)
         self.set_completion_label = tk.Label(set_completion_frame, text="", bg="#e8f5e9", fg="#1b5e20", font=("Arial", 11, "bold"), anchor="w", justify="left")
         self.set_completion_label.pack(anchor="w", padx=5, pady=2)
 
-        # Set Pack Completion
         set_pack_completion_frame = tk.LabelFrame(set_frame, text="Set Pack Completion", padx=10, pady=10, bg="#e8f5e9", fg="#1b5e20", labelanchor="n")
         set_pack_completion_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=2, pady=2)
         self.set_pack_completion_frame = tk.Frame(set_pack_completion_frame, bg="#e8f5e9")
         self.set_pack_completion_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=2)
 
-        # Right: Inventory and Inventory Packs
         inventory_frame = tk.Frame(bottom_main_frame)
         inventory_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(5, 0))
 
-        # Inventory Section (right)
         inventory_main_frame = tk.LabelFrame(inventory_frame, text="Inventory", padx=10, pady=10, bg="#e3f2fd", fg="#1565c0", labelanchor="n")
         inventory_main_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=False, padx=2, pady=2)
 
-        # General inventory count
         self.general_inventory_label = tk.Label(inventory_main_frame, text="", bg="#e3f2fd", fg="#1565c0", font=("Arial", 11, "bold"))
         self.general_inventory_label.pack(anchor="w", padx=5, pady=2)
 
-        # Inventory grouped by pack
+
         inventory_packs_frame = tk.LabelFrame(inventory_frame, text="Inventory Packs", padx=10, pady=10, bg="#e3f2fd", fg="#1565c0", labelanchor="n")
         inventory_packs_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=2, pady=2)
         self.pack_inventory_frame = tk.Frame(inventory_packs_frame, bg="#e3f2fd")
         self.pack_inventory_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=2)
 
-        # Bind tab change event
         self.tab_control.bind("<<NotebookTabChanged>>", self.on_tab_change)
 
     def show_dataframe(self, df):
-        # Update self.set to be the indices of cards in the set (for set completion)
+        
         set_df = self._get_set_df(df)
         self.set = set(set_df.index)
-        # Show for both tabs
+        
         self._show_tree(self.tree, df, self.pie_frame, is_set=False)
         self._show_tree(self.tree_set, set_df, self.pie_frame_set, is_set=True)
         self.groups = None
@@ -225,6 +218,7 @@ class DataFrameViewer(tk.Tk):
         self.update_pack_suggestion(is_set=True)
 
     def _show_tree(self, tree, df, pie_frame, is_set):
+
         tree.delete(*tree.get_children())
         if not hasattr(self, 'checkbox_vars_all'):
             self.checkbox_vars_all = {}
@@ -253,6 +247,7 @@ class DataFrameViewer(tk.Tk):
             tree.set(item_id, "Inventory", u"☐")
 
     def on_tab_change(self, event):
+
         tab = self.tab_control.select()
         if tab == str(self.tab_all):
             self.show_group_pie_chart(is_set=False)
@@ -262,7 +257,7 @@ class DataFrameViewer(tk.Tk):
             self.update_pack_suggestion_for_current_tab()
 
     def on_group_change(self, value):
-        # Update both trees
+        
         grouped = self.df.groupby(value)
         self.tree.delete(*self.tree.get_children())
         self.checkbox_vars_all = {}
@@ -274,7 +269,7 @@ class DataFrameViewer(tk.Tk):
             values = ["", group_display] + [""] * (len(self.df.columns) - 1)
             group_id = self.tree.insert("", tk.END, text=f"Group: {name}", values=values, open=False, tags=("group",))
             self.groups[group_id] = group
-        # For set completion tab
+        
         set_df = self._get_set_df(self.df)
         grouped_set = set_df.groupby(value)
         self.tree_set.delete(*self.tree_set.get_children())
@@ -293,7 +288,7 @@ class DataFrameViewer(tk.Tk):
         self.update_pack_suggestion_for_current_tab()
 
     def on_item_select(self, event):
-        # Determine which tree
+        
         widget = event.widget
         selected = widget.selection()
         if not selected:
@@ -308,6 +303,7 @@ class DataFrameViewer(tk.Tk):
         return self.groups and item_id in self.groups
 
     def handle_group_selection(self, item_id):
+
         group_df = self.groups[item_id]
         if not self.tree.get_children(item_id):
             self.expand_group(item_id, group_df)
@@ -317,6 +313,7 @@ class DataFrameViewer(tk.Tk):
         self.update_inventory_counter()
 
     def expand_group(self, item_id, group_df):
+
         for idx, row in group_df.iterrows():
             inv = 1 if idx in self.inventory else 0
             values = [u"☑" if inv else u"☐"] + [row[col] for col in self.df.columns]
@@ -325,15 +322,17 @@ class DataFrameViewer(tk.Tk):
             self.tree.set(child_id, "Inventory", u"☑" if inv else u"☐")
 
     def collapse_group(self, item_id):
+
         for child in self.tree.get_children(item_id):
             self.tree.delete(child)
 
     def handle_item_selection(self):
+
         self.current_group = None
         self.update_inventory_counter()
 
     def on_tree_click(self, event):
-        # Determine which tree
+        
         widget = event.widget
         region = widget.identify("region", event.x, event.y)
         if region != "cell":
@@ -370,6 +369,7 @@ class DataFrameViewer(tk.Tk):
         self.update_pack_suggestion_for_current_tab()
 
     def get_df_index_from_tree_item(self, item_id, tree_widget=None):
+
         if tree_widget is None:
             tree_widget = self.tree
         parent = tree_widget.parent(item_id)
@@ -387,6 +387,7 @@ class DataFrameViewer(tk.Tk):
         return None
 
     def show_group_pie_chart(self, is_set=False):
+
         group_col = self.group_var.get()
         if group_col.lower() in ["id", "name"]:
             self.clear_pie_chart(is_set)
@@ -432,17 +433,20 @@ class DataFrameViewer(tk.Tk):
                 self.pie_canvas = None
 
     def update_inventory_counter(self):
+
         self._update_set_completion()
         self._update_inventory_count()
         self._update_inventory_by_pack()
         self.update_pack_suggestion_for_current_tab()
 
     def _get_set_df(self, df):
+
         if "rarity" in df.columns:
             return df[df["rarity"].isin(self.set_completion_rarities)]
         return df
 
     def _update_set_completion(self):
+
         rarities = self.set_completion_rarities
         if "rarity" in self.df.columns:
             set_df = self.df[self.df["rarity"].isin(rarities)]
@@ -458,6 +462,7 @@ class DataFrameViewer(tk.Tk):
             self._clear_set_pack_completion("No rarity data available.", "#e8f5e9")
 
     def _update_set_pack_completion(self, set_df):
+
         for widget in self.set_pack_completion_frame.winfo_children():
             widget.destroy()
         if "pack" in self.df.columns:
@@ -480,6 +485,7 @@ class DataFrameViewer(tk.Tk):
             self.update_pack_suggestion_for_current_tab()
 
     def _clear_set_pack_completion(self, text, bg):
+
         for widget in self.set_pack_completion_frame.winfo_children():
             widget.destroy()
         lbl = tk.Label(self.set_pack_completion_frame, text=text, bg=bg)
@@ -488,12 +494,14 @@ class DataFrameViewer(tk.Tk):
         self.update_pack_suggestion_for_current_tab()
 
     def _update_inventory_count(self):
+
         total = len(self.df)
         owned = len(self.inventory)
         missing = total - owned
         self.general_inventory_label.config(text=f"Inventory: {owned} / {total} (missing: {missing})")
 
     def _update_inventory_by_pack(self):
+
         for widget in self.pack_inventory_frame.winfo_children():
             widget.destroy()
         if 'pack' in self.df.columns:
@@ -512,12 +520,13 @@ class DataFrameViewer(tk.Tk):
             lbl.pack(side=tk.TOP, anchor="w", fill=tk.X, padx=2, pady=1)
 
     def update_pack_suggestion_for_current_tab(self):
-        # Detect current tab and use the corresponding data
+
         current_tab = self.tab_control.select()
         is_set = (current_tab == str(self.tab_set))
         self.update_pack_suggestion(is_set=is_set)
 
     def update_pack_suggestion(self, is_set=False):
+
         packs = self._get_incomplete_packs(is_set=is_set)
         if not packs:
             self._set_suggestion_label("Congratulations! All packs are complete.", is_set)
@@ -534,7 +543,6 @@ class DataFrameViewer(tk.Tk):
             df = self.df
             relevant_indices = set(self.df.index)
 
-        # Only consider missing cards that are in the relevant set (set or all)
         missing_cards = df[(~df.index.isin(self.inventory)) & (df.index.isin(relevant_indices))]
         missing_cards = missing_cards[missing_cards["rarity"].notna() & missing_cards["pack"].notna()]
         rarity_to_row = self._get_rarity_to_row()
@@ -547,6 +555,7 @@ class DataFrameViewer(tk.Tk):
         self._display_pack_suggestion(pack_probs, is_set)
 
     def _set_suggestion_label(self, text, is_set):
+
         if is_set:
             self.suggestion_label_set.config(text=text)
         else:
@@ -554,10 +563,9 @@ class DataFrameViewer(tk.Tk):
 
     def _get_incomplete_packs(self, is_set=False):
         if is_set:
-        # Use set-completion packs
             return [p for p in getattr(self, 'pack_completion_data', []) if p[0] != "Both" and p[3] > 0]
         else:
-            # Calculate for all inventory
+            
             if "pack" not in self.df.columns:
                 return []
             pack_counts = self.df["pack"].value_counts()
@@ -579,6 +587,7 @@ class DataFrameViewer(tk.Tk):
         return {r: i for i, r in enumerate(rarity_order)}
 
     def _calculate_pack_probabilities(self, packs, missing_cards, rarity_to_row, is_set=False):
+
         pack_probs = {}
         prob_matrix = logic.calc_prob()
         for pack_info in packs:
@@ -601,11 +610,12 @@ class DataFrameViewer(tk.Tk):
                 
                 prob_rar = prob * (1 / rarity_set[rarity_set['rarity'] == rarity].shape[0])
                 prob_sum += prob_rar
-                #print(f'{card["name"]} ({rarity}, {pack_name}) - Probability: {prob_rar:.4f}')
+
             pack_probs[pack_name] = prob_sum 
         return pack_probs
 
     def _display_pack_suggestion(self, pack_probs, is_set=False):
+        
         max_prob = max(pack_probs.values())
         best_packs = [p for p, v in pack_probs.items() if abs(v - max_prob) < 1e-8]
         def fmt_prob(p): return f"{100*p:.2f}%"
@@ -621,9 +631,8 @@ class DataFrameViewer(tk.Tk):
                 suggestion += f"  {p}: {fmt_prob(v)}\n"
         self._set_suggestion_label(suggestion.strip(), is_set)
 
-# Example usage:
+
 if __name__ == "__main__":
-    # Replace this with your actual data loading/splitting logic
     df = importer.read_json_file()
     df = importer.clean_db(df)
     app = DataFrameViewer(df)
