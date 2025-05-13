@@ -285,6 +285,7 @@ class DataFrameViewer(tk.Tk):
             group_display = f"{name} ({group_owned}/{group_total})"
             values = ["", group_display] + [""] * (len(self.df.columns) - 1)
             group_id = self.tree_set.insert("", tk.END, text=f"Group: {name}", values=values, open=False, tags=("group",))
+            self.groups[group_id] = group
         
         self.update_inventory_counter()
         self.show_group_pie_chart()
