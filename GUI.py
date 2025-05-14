@@ -1,11 +1,16 @@
 import tkinter as tk
 import importer
 import logic
+import img_aqcuisition
 from tkinter import ttk, filedialog
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+from PIL import Image, ImageTk
+import io
+import requests
+import threading
 
 class DataFrameViewer(tk.Tk):
     
@@ -158,7 +163,25 @@ class DataFrameViewer(tk.Tk):
             right_frame = tk.Frame(main_frame)
             right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10)
 
-            pie_frame = tk.LabelFrame(right_frame, text="Completion Chart", padx=10, pady=10)
+            # --- NEW: Add notebook for right frame ---
+            right_notebook = ttk.Notebook(right_frame)
+            right_notebook.pack(fill=tk.BOTH, expand=True)
+
+            # Tab 1: Image Display
+            image_tab = tk.Frame(right_notebook)
+            right_notebook.add(image_tab, text="Image Display")
+            # Placeholder for image display widget
+            img_label = tk.Label(image_tab, text="Card image will appear here.", font=("Arial", 12))
+            img_label.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+            if is_set:
+                self.img_label_set = img_label
+            else:
+                self.img_label = img_label
+
+            # Tab 2: Chart/Graph
+            graph_tab = tk.Frame(right_notebook)
+            right_notebook.add(graph_tab, text="Completion Chart")
+            pie_frame = tk.LabelFrame(graph_tab, text="Completion Chart", padx=10, pady=10)
             pie_frame.pack(fill=tk.BOTH, expand=True, pady=5)
             if is_set:
                 self.pie_frame_set = pie_frame
@@ -315,6 +338,10 @@ class DataFrameViewer(tk.Tk):
             self.handle_group_selection(item_id, widget, groups)
         else:
             self.handle_item_selection()
+        # Display image for selected card
+        idx = self.get_df_index_from_tree_item(item_id, widget)
+        if idx is not None:
+            self.display_card_image(idx, widget)
 
     def handle_group_selection(self, item_id, tree_widget, groups):
         group_df = groups[item_id]
@@ -606,14 +633,14 @@ class DataFrameViewer(tk.Tk):
         ]
         return {r: i for i, r in enumerate(rarity_order)}
 
-    def _calculate_pack_probabilities(self, packs, missing_cards, rarity_to_row, is_set=False):
+    def _calculate_pack_probabilities(self, packs, missing_cards, rarity_to_row):
 
         pack_probs = {}
         prob_matrix = logic.calc_prob()
         for pack_info in packs:
             pack_name = pack_info[0]
             cards_in_pack = missing_cards[(missing_cards["pack"] == pack_name) | (missing_cards["pack"] == "Both")]
-            prob_sum = 0.0
+            prob_sum = [1.0, 1.0, 1.0, 1.0, 1.0]
             for _, card in cards_in_pack.iterrows():
                 rarity = card["rarity"]
                 if rarity not in rarity_to_row:
@@ -621,35 +648,70 @@ class DataFrameViewer(tk.Tk):
                 row_idx = rarity_to_row[rarity]
                 if row_idx >= len(prob_matrix):
                     continue
-                row_p = prob_matrix[row_idx]
-                prob = 1 - np.prod(1 - np.array(row_p))
-                if is_set: 
-                    rarity_set = self.df[self.df.index.isin(self.set)]
-                else:
-                    rarity_set = self.df[self.df.index.isin(self.df.index)]
-                
-                prob_rar = prob * (1 / rarity_set[rarity_set['rarity'] == rarity].shape[0])
-                prob_sum += prob_rar
+                row_p = 1 - np.array(prob_matrix[row_idx])
+                prob = np.concatenate((np.repeat(row_p[0], 3), row_p[1:]))
+                prob_sum *= prob
 
-            pack_probs[pack_name] = prob_sum 
+            pack_probs[pack_name] = 1 - np.prod(prob_sum)
         return pack_probs
 
     def _display_pack_suggestion(self, pack_probs, is_set=False):
         
         max_prob = max(pack_probs.values())
         best_packs = [p for p, v in pack_probs.items() if abs(v - max_prob) < 1e-8]
-        def fmt_prob(p): return f"{100*p:.2f}%"
         suggestion = ""
         if len(best_packs) == 1:
-            suggestion += f"Suggestion: Open '{best_packs[0]}' (probability to get a missing card: {fmt_prob(max_prob)})\n"
+            suggestion += f"Suggestion: Open '{best_packs[0]}' for better chances of completion.\n"
         else:
-            suggestion += f"Suggestion: Open any of {', '.join(best_packs)} (probability: {fmt_prob(max_prob)})\n"
-        other_packs = [(p, v) for p, v in pack_probs.items() if p not in best_packs]
-        if other_packs:
-            suggestion += "\nOther packs:\n"
-            for p, v in sorted(other_packs, key=lambda x: -x[1]):
-                suggestion += f"  {p}: {fmt_prob(v)}\n"
+            suggestion += f"Suggestion: Open any of {', '.join(best_packs)}\n"
         self._set_suggestion_label(suggestion.strip(), is_set)
+
+    def display_card_image(self, idx, widget):
+        try:
+            row = self.df.loc[idx]
+        except Exception:
+            return
+
+        card_name = row.get("name", "")
+        card_id = row.get("id", "")
+        card_id = card_id.split('-')[1].lstrip('0') if '-' in card_id else card_id
+
+        # Select the correct label
+        if widget == self.tree_set:
+            label = self.img_label_set
+        else:
+            label = self.img_label
+
+        # Show loading text while fetching
+        label.config(image="", text="Loading image...")
+        label.image = None
+
+        def fetch_and_update():
+            try:
+                url = img_aqcuisition.get_image(card_name=card_name, card_id=card_id)
+                if not url:
+                    raise ValueError("No image URL found")
+                response = requests.get(url)
+                image = Image.open(io.BytesIO(response.content))
+                image = image.resize((300, 420), Image.LANCZOS if hasattr(Image, "LANCZOS") else Image.ANTIALIAS)
+                photo = ImageTk.PhotoImage(image)
+            except Exception as e:
+                print(f"Image load error: {e}")
+                photo = None
+
+            def update_label():
+                if photo:
+                    label.config(image=photo, text="")
+                    label.image = photo
+                else:
+                    label.config(image="", text="Image not available")
+                    label.image = None
+
+            # Schedule the GUI update in the main thread
+            self.after(0, update_label)
+
+        # Start the image fetch in a background thread
+        threading.Thread(target=fetch_and_update, daemon=True).start()
 
 if __name__ == "__main__":
     df = importer.read_json_file()

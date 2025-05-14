@@ -13,5 +13,6 @@ def calc_prob():
 
     p_prob = np.array([prob_1to3_reg, prob_4_reg, prob_5_reg]).T / 100.0
     p_god = np.array(prob_1to5_g).T / 100.0
+    prob_matrix = prob_pack[0] * p_prob + np.array([prob_pack[1] * p_god]*3).T
 
-    return prob_pack[0] * p_prob + np.array([prob_pack[1] * p_god]*3).T
+    return prob_matrix
