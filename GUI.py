@@ -1,9 +1,8 @@
 import tkinter as tk
 import importer
 import logic
-from tkinter import ttk
+from tkinter import ttk, filedialog
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from tkinter import filedialog
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -30,6 +29,9 @@ class DataFrameViewer(tk.Tk):
         self.create_menu()
         self.create_widgets()
         self.show_dataframe(self.df)
+
+        self.groups_all = {} 
+        self.groups_set = {} 
 
     def create_menu(self):
 
@@ -101,6 +103,10 @@ class DataFrameViewer(tk.Tk):
 
     def create_widgets(self):
         
+        style = ttk.Style(self)
+        style.configure("Treeview", font = ("Arial", 14))
+        style.configure("Treeview.Heading", font = ("Arial", 14))
+
         top_frame = tk.Frame(self)
         top_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
 
@@ -152,8 +158,8 @@ class DataFrameViewer(tk.Tk):
             right_frame = tk.Frame(main_frame)
             right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10)
 
-            pie_frame = tk.LabelFrame(right_frame, text="Pie Chart", padx=10, pady=10)
-            pie_frame.pack(fill=tk.BOTH, expand=False, pady=5)
+            pie_frame = tk.LabelFrame(right_frame, text="Completion Chart", padx=10, pady=10)
+            pie_frame.pack(fill=tk.BOTH, expand=True, pady=5)
             if is_set:
                 self.pie_frame_set = pie_frame
                 self.pie_canvas_set = None
@@ -161,18 +167,11 @@ class DataFrameViewer(tk.Tk):
                 self.pie_frame = pie_frame
                 self.pie_canvas = None
 
-            suggestion_frame = tk.LabelFrame(right_frame, text="Which pack should you open?", padx=10, pady=10)
-            suggestion_frame.pack(fill=tk.BOTH, expand=False, pady=5)
-            suggestion_label = tk.Label(suggestion_frame, text="", font=("Arial", 12, "bold"), fg="#1565c0")
-            suggestion_label.pack(fill=tk.BOTH, expand=True)
-            if is_set:
-                self.suggestion_label_set = suggestion_label
-            else:
-                self.suggestion_label = suggestion_label
-
+        # Create a 3-column layout for the bottom section: Left (Set Completion), Middle (Inventory), Right (Suggestion)
         bottom_main_frame = tk.Frame(self)
         bottom_main_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=5)
 
+        # Left: Set Completion
         set_frame = tk.Frame(bottom_main_frame)
         set_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
 
@@ -186,8 +185,9 @@ class DataFrameViewer(tk.Tk):
         self.set_pack_completion_frame = tk.Frame(set_pack_completion_frame, bg="#e8f5e9")
         self.set_pack_completion_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=2)
 
+        # Middle: Inventory
         inventory_frame = tk.Frame(bottom_main_frame)
-        inventory_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(5, 0))
+        inventory_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(5, 5))
 
         inventory_main_frame = tk.LabelFrame(inventory_frame, text="Inventory", padx=10, pady=10, bg="#e3f2fd", fg="#1565c0", labelanchor="n")
         inventory_main_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=False, padx=2, pady=2)
@@ -195,11 +195,22 @@ class DataFrameViewer(tk.Tk):
         self.general_inventory_label = tk.Label(inventory_main_frame, text="", bg="#e3f2fd", fg="#1565c0", font=("Arial", 11, "bold"))
         self.general_inventory_label.pack(anchor="w", padx=5, pady=2)
 
-
         inventory_packs_frame = tk.LabelFrame(inventory_frame, text="Inventory Packs", padx=10, pady=10, bg="#e3f2fd", fg="#1565c0", labelanchor="n")
-        inventory_packs_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=2, pady=2)
+        inventory_packs_frame.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True, padx=2, pady=2)
         self.pack_inventory_frame = tk.Frame(inventory_packs_frame, bg="#e3f2fd")
         self.pack_inventory_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=2)
+
+        # Right: Suggestion
+        suggestion_frame = tk.Frame(bottom_main_frame)
+        suggestion_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(5, 0))
+
+        suggestion_main_frame = tk.LabelFrame(suggestion_frame, text="Which pack should you open?", padx=10, pady=10)
+        suggestion_main_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+        suggestion_label = tk.Label(suggestion_main_frame, text="", font=("Arial", 12, "bold"), fg="#1565c0")
+        suggestion_label.pack(fill=tk.BOTH, expand=True)
+        self.suggestion_label = suggestion_label
+        self.suggestion_label_set = suggestion_label  # For compatibility with set tab
+
 
         self.tab_control.bind("<<NotebookTabChanged>>", self.on_tab_change)
 
@@ -207,13 +218,12 @@ class DataFrameViewer(tk.Tk):
         
         set_df = self._get_set_df(df)
         self.set = set(set_df.index)
-        
         self._show_tree(self.tree, df, self.pie_frame, is_set=False)
         self._show_tree(self.tree_set, set_df, self.pie_frame_set, is_set=True)
         self.groups = None
         self.update_inventory_counter()
-        self.show_group_pie_chart()
-        self.show_group_pie_chart(is_set=True)
+        self.show_group_bar_chart()
+        self.show_group_bar_chart(is_set=True)
         self.update_pack_suggestion()
         self.update_pack_suggestion(is_set=True)
 
@@ -250,41 +260,41 @@ class DataFrameViewer(tk.Tk):
 
         tab = self.tab_control.select()
         if tab == str(self.tab_all):
-            self.show_group_pie_chart(is_set=False)
+            self.show_group_bar_chart(is_set=False)
             self.update_pack_suggestion_for_current_tab()
         else:
-            self.show_group_pie_chart(is_set=True)
+            self.show_group_bar_chart(is_set=True)
             self.update_pack_suggestion_for_current_tab()
 
     def on_group_change(self, value):
-        
         grouped = self.df.groupby(value)
         self.tree.delete(*self.tree.get_children())
         self.checkbox_vars_all = {}
-        self.groups = {}
+        self.groups_all = {}
         for name, group in grouped:
             group_owned = sum(idx in self.inventory for idx in group.index)
             group_total = len(group)
             group_display = f"{name} ({group_owned}/{group_total})"
             values = ["", group_display] + [""] * (len(self.df.columns) - 1)
             group_id = self.tree.insert("", tk.END, text=f"Group: {name}", values=values, open=False, tags=("group",))
-            self.groups[group_id] = group
-        
+            self.groups_all[group_id] = group
+
         set_df = self._get_set_df(self.df)
         grouped_set = set_df.groupby(value)
         self.tree_set.delete(*self.tree_set.get_children())
         self.checkbox_vars_set = {}
+        self.groups_set = {}
         for name, group in grouped_set:
             group_owned = sum(idx in self.inventory for idx in group.index)
             group_total = len(group)
             group_display = f"{name} ({group_owned}/{group_total})"
             values = ["", group_display] + [""] * (len(self.df.columns) - 1)
             group_id = self.tree_set.insert("", tk.END, text=f"Group: {name}", values=values, open=False, tags=("group",))
-            self.groups[group_id] = group
-        
+            self.groups_set[group_id] = group
+
         self.update_inventory_counter()
-        self.show_group_pie_chart()
-        self.show_group_pie_chart(is_set=True)
+        self.show_group_bar_chart()
+        self.show_group_bar_chart(is_set=True)
         self.update_pack_suggestion_for_current_tab()
 
     def on_item_select(self, event):
@@ -294,37 +304,38 @@ class DataFrameViewer(tk.Tk):
         if not selected:
             return
         item_id = selected[0]
-        if self.is_group_node(item_id):
-            self.handle_group_selection(item_id)
+        # Determine which tree and group mapping to use
+        if widget == self.tree:
+            groups = self.groups_all
+        elif widget == self.tree_set:
+            groups = self.groups_set
+        else:
+            return
+        if groups and item_id in groups:
+            self.handle_group_selection(item_id, widget, groups)
         else:
             self.handle_item_selection()
 
-    def is_group_node(self, item_id):
-        return self.groups and item_id in self.groups
-
-    def handle_group_selection(self, item_id):
-
-        group_df = self.groups[item_id]
-        if not self.tree.get_children(item_id):
-            self.expand_group(item_id, group_df)
+    def handle_group_selection(self, item_id, tree_widget, groups):
+        group_df = groups[item_id]
+        if not tree_widget.get_children(item_id):
+            self.expand_group(item_id, group_df, tree_widget)
         else:
-            self.collapse_group(item_id)
+            self.collapse_group(item_id, tree_widget)
         self.current_group = group_df
         self.update_inventory_counter()
 
-    def expand_group(self, item_id, group_df):
+    def expand_group(self, item_id, group_df, tree_widget):
 
         for idx, row in group_df.iterrows():
             inv = 1 if idx in self.inventory else 0
             values = [u"☑" if inv else u"☐"] + [row[col] for col in self.df.columns]
-            child_id = self.tree.insert(item_id, tk.END, values=values, tags=("item",))
-            self.checkbox_vars_all[child_id] = tk.IntVar(value=inv)
-            self.tree.set(child_id, "Inventory", u"☑" if inv else u"☐")
+            tree_widget.insert(item_id, tk.END, values=values, tags=("item",))
 
-    def collapse_group(self, item_id):
+    def collapse_group(self, item_id, tree_widget):
 
-        for child in self.tree.get_children(item_id):
-            self.tree.delete(child)
+        for child in tree_widget.get_children(item_id):
+            tree_widget.delete(child)
 
     def handle_item_selection(self):
 
@@ -386,28 +397,37 @@ class DataFrameViewer(tk.Tk):
                     return idx
         return None
 
-    def show_group_pie_chart(self, is_set=False):
-
+    def show_group_bar_chart(self, is_set=False):
         group_col = self.group_var.get()
         if group_col.lower() in ["id", "name"]:
             self.clear_pie_chart(is_set)
             return
         df = self._get_set_df(self.df) if is_set else self.df
-        counts = df[group_col].value_counts()
-        if counts.empty:
+        if group_col not in df.columns:
             self.clear_pie_chart(is_set)
             return
-        owned_counts = df[df.index.isin(self.inventory)][group_col].value_counts()
-        labels = []
-        for group in counts.index:
-            owned = owned_counts.get(group, 0)
-            total = counts[group]
-            labels.append(f"{group} ({owned}/{total})")
-        fig, ax = plt.subplots(figsize=(2.5, 2.5))
-        wedges, _ = ax.pie(counts, labels=None, startangle=90)
-        ax.set_title(f"{group_col} distribution")
-        ax.legend(wedges, labels, title=group_col, loc="lower center", bbox_to_anchor=(0.5, -0.15), ncol=2, fontsize=9)
-        fig.subplots_adjust(left=0.05, right=0.95, bottom=0.25, top=0.90)
+
+        owned_mask = df.index.isin(self.inventory)
+        group_counts = df[group_col].value_counts().sort_index()
+        owned_counts = df[owned_mask][group_col].value_counts().reindex(group_counts.index, fill_value=0)
+        missing_counts = group_counts - owned_counts
+
+        # Normalize to percentage
+        total_counts = group_counts
+        owned_pct = owned_counts / total_counts * 100
+        missing_pct = missing_counts / total_counts * 100
+
+        fig, ax = plt.subplots(figsize=(6, max(4, len(group_counts) * 0.6)))
+        ax.barh(group_counts.index, owned_pct, label="Owned", color="#4caf50")
+        ax.barh(group_counts.index, missing_pct, left=owned_pct, label="Missing", color="#e57373")
+        ax.set_xlabel("Percentage (%)")
+        ax.set_ylabel(group_col.capitalize())
+        ax.set_xlim(0, 100)
+        ax.set_title(f"{group_col.capitalize()} - Owned vs Missing (%)")
+        ax.legend(loc="lower right")
+        plt.tight_layout()
+
+        # Replace the pie chart with the bar chart in the GUI
         if is_set:
             if getattr(self, "pie_canvas_set", None):
                 self.pie_canvas_set.get_tk_widget().destroy()
@@ -454,7 +474,7 @@ class DataFrameViewer(tk.Tk):
             set_owned = len(set_df[set_df.index.isin(self.inventory)])
             set_missing = set_total - set_owned
             self.set_completion_label.config(
-                text=f"Set Completion (Common/Uncommon/Rare/Rare EX): {set_owned} / {set_total} (missing: {set_missing})"
+                text=f"Minimum Set Completion: {set_owned} / {set_total} (missing: {set_missing})"
             )
             self._update_set_pack_completion(set_df)
         else:
@@ -473,7 +493,7 @@ class DataFrameViewer(tk.Tk):
                 owned = owned_packs.get(pack, 0)
                 total_pack = pack_counts[pack]
                 missing = total_pack - owned
-                color = "#a5d6a7" if missing == 0 else "#ffe082"
+                color = "#1c9625" if missing == 0 else "#b9c4ba"
                 text = f"{pack}: {owned}/{total_pack} (missing: {missing})"
                 lbl = tk.Label(self.set_pack_completion_frame, text=text, bg=color, font=("Arial", 10), anchor="w")
                 lbl.pack(side=tk.TOP, anchor="w", fill=tk.X, padx=2, pady=1)
@@ -511,7 +531,7 @@ class DataFrameViewer(tk.Tk):
                 owned = owned_packs.get(pack, 0)
                 total_pack = pack_counts[pack]
                 missing = total_pack - owned
-                color = "#a5d6a7" if missing == 0 else "#ffe082"
+                color = "#0a78f4" if missing == 0 else "#b5c1ca"
                 text = f"{pack}: {owned}/{total_pack} (missing: {missing})"
                 lbl = tk.Label(self.pack_inventory_frame, text=text, bg=color, font=("Arial", 10), anchor="w")
                 lbl.pack(side=tk.TOP, anchor="w", fill=tk.X, padx=2, pady=1)
@@ -630,7 +650,6 @@ class DataFrameViewer(tk.Tk):
             for p, v in sorted(other_packs, key=lambda x: -x[1]):
                 suggestion += f"  {p}: {fmt_prob(v)}\n"
         self._set_suggestion_label(suggestion.strip(), is_set)
-
 
 if __name__ == "__main__":
     df = importer.read_json_file()
