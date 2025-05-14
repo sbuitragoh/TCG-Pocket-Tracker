@@ -49,7 +49,6 @@ class DataFrameViewer(tk.Tk):
         self.config(menu=menubar)
 
     def import_json(self):
-
         file_paths = filedialog.askopenfilenames(
             defaultextension=".json",
             filetypes=[("JSON Files", "*.json"), ("All Files", "*.*")]
@@ -62,7 +61,7 @@ class DataFrameViewer(tk.Tk):
                     df = importer.clean_db(df)
                     dfs.append(df)
                 except Exception as e:
-                    tk.messagebox.showerror("Error", f"Failed to import {path}:\n{e}")
+                    self.set_status_message(f"Failed to import {path}: {e}")
             if dfs:
                 self.df = pd.concat(dfs, ignore_index=True)
                 if 'pack' in self.df.columns:
@@ -70,41 +69,69 @@ class DataFrameViewer(tk.Tk):
                 self.group_var.set(self.df.columns[0])
                 self.inventory = set()
                 self.show_dataframe(self.df)
+                # Store the path of the first JSON loaded (or all, if you want)
+                self.json_path = file_paths[0] if len(file_paths) == 1 else ";".join(file_paths)
 
     def save_progress(self):
-
         file_path = filedialog.asksaveasfilename(defaultextension=".pif", filetypes=[("Pokemon Inventory Files", "*.pif"), ("All Files", "*.*")])
         if file_path:
             try:
                 with open(file_path, "w") as f:
+                    # Save the current JSON path as the first line
+                    f.write(f"#json_path={getattr(self, 'json_path', '')}\n")
                     for idx in self.inventory:
                         f.write(str(idx) + "\n")
             except Exception as e:
-                tk.messagebox.showerror("Error", f"Failed to save progress:\n{e}")
+                self.set_status_message(f"Failed to save progress: {e}")
 
     def load_progress(self):
-
         file_path = filedialog.askopenfilename(defaultextension=".pif", filetypes=[("Pokemon Inventory Files", "*.pif"), ("All Files", "*.*")])
-        if file_path:
-            try:
-                with open(file_path, "r") as f:
-                    indices = set()
-                    for line in f:
-                        line = line.strip()
-                        if line:
-                            try:
-                                idx = int(line)
-                            except ValueError:
-                                idx = line
-                            indices.add(idx)
-                    self.inventory = indices
+        if not file_path:
+            return
+        try:
+            lines = self._read_progress_file(file_path)
+            json_path, indices = self._parse_progress_lines(lines)
+            self._update_df_and_inventory(json_path, indices)
+        except Exception as e:
+            self.set_status_message(f"Failed to load progress: {e}")
 
-                if self.groups:
-                    self.on_group_change(self.group_var.get())
-                else:
-                    self.show_dataframe(self.df)
+    def _read_progress_file(self, file_path):
+        with open(file_path, "r") as f:
+            return f.readlines()
+
+    def _parse_progress_lines(self, lines):
+        json_path = ""
+        if lines and lines[0].startswith("#json_path="):
+            json_path = lines[0].strip().split("=", 1)[1]
+            lines = lines[1:]
+        indices = set()
+        for line in lines:
+            line = line.strip()
+            if line:
+                try:
+                    idx = int(line)
+                except ValueError:
+                    idx = line
+                indices.add(idx)
+        return json_path, indices
+
+    def _update_df_and_inventory(self, json_path, indices):
+        # If JSON path is present and different, reload it
+        if json_path and getattr(self, "json_path", "") != json_path:
+            try:
+                df = importer.read_json_file(json_path)
+                df = importer.clean_db(df)
+                self.df = df
+                self.json_path = json_path
+                self.group_var.set(self.df.columns[0])
+                self.show_dataframe(self.df)
             except Exception as e:
-                tk.messagebox.showerror("Error", f"Failed to load progress:\n{e}")
+                self.set_status_message(f"Failed to load referenced JSON: {e}")
+        self.inventory = indices
+        if self.groups:
+            self.on_group_change(self.group_var.get())
+        else:
+            self.show_dataframe(self.df)
 
     def create_widgets(self):
         
@@ -236,6 +263,10 @@ class DataFrameViewer(tk.Tk):
 
 
         self.tab_control.bind("<<NotebookTabChanged>>", self.on_tab_change)
+
+        self.status_var = tk.StringVar()
+        self.status_bar = tk.Label(self, textvariable=self.status_var, bd=1, relief=tk.SUNKEN, anchor="w", font=("Arial", 10), bg="#f5f5f5")
+        self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
 
     def show_dataframe(self, df):
         
@@ -676,42 +707,50 @@ class DataFrameViewer(tk.Tk):
         card_id = row.get("id", "")
         card_id = card_id.split('-')[1].lstrip('0') if '-' in card_id else card_id
 
-        # Select the correct label
-        if widget == self.tree_set:
-            label = self.img_label_set
-        else:
-            label = self.img_label
+        label = self.img_label_set if widget == self.tree_set else self.img_label
 
-        # Show loading text while fetching
         label.config(image="", text="Loading image...")
         label.image = None
 
-        def fetch_and_update():
-            try:
-                url = img_aqcuisition.get_image(card_name=card_name, card_id=card_id)
-                if not url:
-                    raise ValueError("No image URL found")
+        threading.Thread(
+            target=self._fetch_and_update_image,
+            args=(card_name, card_id, label),
+            daemon=True
+        ).start()
+
+    def _fetch_and_update_image(self, card_name, card_id, label):
+        photo = None
+        error_message = None
+        try:
+            url = img_aqcuisition.get_image(card_name=card_name, card_id=card_id)
+            if not url:
+                error_message = "No image URL found"
+            else:
                 response = requests.get(url)
                 image = Image.open(io.BytesIO(response.content))
                 image = image.resize((300, 420), Image.LANCZOS if hasattr(Image, "LANCZOS") else Image.ANTIALIAS)
                 photo = ImageTk.PhotoImage(image)
-            except Exception as e:
-                print(f"Image load error: {e}")
-                photo = None
+        except Exception as e:
+            error_message = f"Image load error: {e}"
 
-            def update_label():
-                if photo:
-                    label.config(image=photo, text="")
-                    label.image = photo
-                else:
-                    label.config(image="", text="Image not available")
-                    label.image = None
+        def update_label():
+            if error_message:
+                self.set_status_message(error_message)
+                label.config(image="", text="Image not available")
+                label.image = None
+            elif photo:
+                label.config(image=photo, text="")
+                label.image = photo
+            else:
+                label.config(image="", text="Image not available")
+                label.image = None
 
-            # Schedule the GUI update in the main thread
-            self.after(0, update_label)
+        self.after(0, update_label)
 
-        # Start the image fetch in a background thread
-        threading.Thread(target=fetch_and_update, daemon=True).start()
+    def set_status_message(self, message, timeout=5000):
+        self.status_var.set(message)
+        if timeout:
+            self.after(timeout, lambda: self.status_var.set(""))
 
 if __name__ == "__main__":
     df = importer.read_json_file()
