@@ -30,9 +30,3 @@ def get_image(card_name, card_id, set_name="Celestial_Guardians"):
             img_url = img_url.replace("thumb/", "").split(".png")[0] + ".png"
             return img_url
     return None
-
-if __name__ == "__main__":
-    card_name = "Dartrix"
-    card_id = '11'
-    image_url = get_image(card_name=card_name, card_id=card_id)
-    print(f"Image URL for {card_name}: {image_url}")

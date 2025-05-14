@@ -1,23 +1,24 @@
-import tkinter as tk
-import importer
-import logic
-import img_aqcuisition
-from tkinter import ttk, filedialog
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
-from PIL import Image, ImageTk
+from src import importer
+from src import logic
+from src import img_aqcuisition
+from src.utils import resource_path
 import io
 import requests
 import threading
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+import tkinter as tk
+from tkinter import ttk, filedialog
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from PIL import Image, ImageTk
 
 class DataFrameViewer(tk.Tk):
     
     def __init__(self, dataframe):
         super().__init__()
-        self.title("DataFrame Viewer")
-        self.geometry("1300x900")
+        self.title("TCG Pocket Tracker")
+        self.state('zoomed')
         
         if 'pack' in dataframe.columns:
             dataframe['pack'] = dataframe['pack'].where(dataframe['pack'].notna(), 'Both')
@@ -31,6 +32,7 @@ class DataFrameViewer(tk.Tk):
         self.inventory = set()  
         self.checkbox_vars = {}  
         self.set_completion_rarities = ["Common", "Uncommon", "Rare", "Rare EX"]
+        self.json_path = resource_path('sets/a3-celestial-guardians.json')
         self.create_menu()
         self.create_widgets()
         self.show_dataframe(self.df)
@@ -73,12 +75,18 @@ class DataFrameViewer(tk.Tk):
                 self.json_path = file_paths[0] if len(file_paths) == 1 else ";".join(file_paths)
 
     def save_progress(self):
-        file_path = filedialog.asksaveasfilename(defaultextension=".pif", filetypes=[("Pokemon Inventory Files", "*.pif"), ("All Files", "*.*")])
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".pif",
+            filetypes=[("Pokemon Inventory Files", "*.pif"), ("All Files", "*.*")]
+        )
         if file_path:
             try:
+                # Ensure self.json_path is set
+                if not getattr(self, "json_path", ""):
+                    self.json_path = resource_path('sets/a3-celestial-guardians.json')
                 with open(file_path, "w") as f:
                     # Save the current JSON path as the first line
-                    f.write(f"#json_path={getattr(self, 'json_path', '')}\n")
+                    f.write(f"#json_path={self.json_path}\n")
                     for idx in self.inventory:
                         f.write(str(idx) + "\n")
             except Exception as e:
@@ -121,6 +129,9 @@ class DataFrameViewer(tk.Tk):
             try:
                 df = importer.read_json_file(json_path)
                 df = importer.clean_db(df)
+                # --- Fix: Normalize 'pack' column here ---
+                if 'pack' in df.columns:
+                    df['pack'] = df['pack'].where(df['pack'].notna(), 'Both')
                 self.df = df
                 self.json_path = json_path
                 self.group_var.set(self.df.columns[0])
@@ -136,31 +147,27 @@ class DataFrameViewer(tk.Tk):
     def create_widgets(self):
         
         style = ttk.Style(self)
-        style.configure("Treeview", font = ("Arial", 14))
-        style.configure("Treeview.Heading", font = ("Arial", 14))
+        style.configure("Treeview", font = ("Arial", 12))
+        style.configure("Treeview.Heading", font = ("Arial", 12))
 
         top_frame = tk.Frame(self)
         top_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
 
-        group_label = tk.Label(top_frame, text="Group by:")
-        group_label.pack(side=tk.LEFT)
-        group_menu = ttk.Combobox(top_frame, textvariable=self.group_var, values=list(self.df.columns), state="readonly")
+        group_options = ["Checked"] + list(self.df.columns)
+        self.group_var.set('Checked')
+        group_menu = ttk.Combobox(top_frame, textvariable=self.group_var, values=group_options, state="readonly")
         group_menu.pack(side=tk.LEFT, padx=5)
         group_menu.bind("<<ComboboxSelected>>", lambda e: self.on_group_change(self.group_var.get()))
-
         
         self.tab_control = ttk.Notebook(self)
         self.tab_control.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
-        
         self.tab_all = tk.Frame(self.tab_control)
         self.tab_control.add(self.tab_all, text="All Inventory")
 
-        
         self.tab_set = tk.Frame(self.tab_control)
         self.tab_control.add(self.tab_set, text="Set Completion Only")
 
-        
         self.main_frames = {}
         for tab, is_set in [(self.tab_all, False), (self.tab_set, True)]:
             main_frame = tk.Frame(tab)
@@ -321,35 +328,77 @@ class DataFrameViewer(tk.Tk):
             self.update_pack_suggestion_for_current_tab()
 
     def on_group_change(self, value):
-        grouped = self.df.groupby(value)
-        self.tree.delete(*self.tree.get_children())
-        self.checkbox_vars_all = {}
-        self.groups_all = {}
-        for name, group in grouped:
-            group_owned = sum(idx in self.inventory for idx in group.index)
-            group_total = len(group)
-            group_display = f"{name} ({group_owned}/{group_total})"
-            values = ["", group_display] + [""] * (len(self.df.columns) - 1)
-            group_id = self.tree.insert("", tk.END, text=f"Group: {name}", values=values, open=False, tags=("group",))
-            self.groups_all[group_id] = group
+        if value == "Checked":
+            # Group by checked/unchecked
+            checked = self.df[self.df.index.isin(self.inventory)]
+            unchecked = self.df[~self.df.index.isin(self.inventory)]
+            groups = {"Checked": checked, "Unchecked": unchecked}
 
-        set_df = self._get_set_df(self.df)
-        grouped_set = set_df.groupby(value)
-        self.tree_set.delete(*self.tree_set.get_children())
-        self.checkbox_vars_set = {}
-        self.groups_set = {}
-        for name, group in grouped_set:
-            group_owned = sum(idx in self.inventory for idx in group.index)
-            group_total = len(group)
-            group_display = f"{name} ({group_owned}/{group_total})"
-            values = ["", group_display] + [""] * (len(self.df.columns) - 1)
-            group_id = self.tree_set.insert("", tk.END, text=f"Group: {name}", values=values, open=False, tags=("group",))
-            self.groups_set[group_id] = group
+            self.tree.delete(*self.tree.get_children())
+            self.checkbox_vars_all = {}
+            self.groups_all = {}
+            for name, group in groups.items():
+                group_owned = len(group)
+                group_total = len(group)
+                group_display = f"{name} ({group_owned}/{group_total})"
+                values = ["", group_display] + [""] * (len(self.df.columns) - 1)
+                group_id = self.tree.insert("", tk.END, text=f"Group: {name}", values=values, open=False, tags=("group",))
+                self.groups_all[group_id] = group
+            self.groups = self.groups_all  # <-- Set self.groups!
 
-        self.update_inventory_counter()
-        self.show_group_bar_chart()
-        self.show_group_bar_chart(is_set=True)
-        self.update_pack_suggestion_for_current_tab()
+            set_df = self._get_set_df(self.df)
+            checked_set = set_df[set_df.index.isin(self.inventory)]
+            unchecked_set = set_df[~set_df.index.isin(self.inventory)]
+            groups_set = {"Checked": checked_set, "Unchecked": unchecked_set}
+
+            self.tree_set.delete(*self.tree_set.get_children())
+            self.checkbox_vars_set = {}
+            self.groups_set = {}
+            for name, group in groups_set.items():
+                group_owned = len(group)
+                group_total = len(group)
+                group_display = f"{name} ({group_owned}/{group_total})"
+                values = ["", group_display] + [""] * (len(self.df.columns) - 1)
+                group_id = self.tree_set.insert("", tk.END, text=f"Group: {name}", values=values, open=False, tags=("group",))
+                self.groups_set[group_id] = group
+
+            self.update_inventory_counter()
+            self.show_group_bar_chart()
+            self.show_group_bar_chart(is_set=True)
+            self.update_pack_suggestion_for_current_tab()
+        else:
+            # Group by selected column
+            grouped = self.df.groupby(value)
+            self.tree.delete(*self.tree.get_children())
+            self.checkbox_vars_all = {}
+            self.groups_all = {}
+            for name, group in grouped:
+                group_owned = sum(idx in self.inventory for idx in group.index)
+                group_total = len(group)
+                group_display = f"{name} ({group_owned}/{group_total})"
+                values = ["", group_display] + [""] * (len(self.df.columns) - 1)
+                group_id = self.tree.insert("", tk.END, text=f"Group: {name}", values=values, open=False, tags=("group",))
+                self.groups_all[group_id] = group
+            self.groups = self.groups_all
+
+            set_df = self._get_set_df(self.df)
+            grouped_set = set_df.groupby(value)
+            self.tree_set.delete(*self.tree_set.get_children())
+            self.checkbox_vars_set = {}
+            self.groups_set = {}
+            for name, group in grouped_set:
+                group_owned = sum(idx in self.inventory for idx in group.index)
+                group_total = len(group)
+                group_display = f"{name} ({group_owned}/{group_total})"
+                values = ["", group_display] + [""] * (len(self.df.columns) - 1)
+                group_id = self.tree_set.insert("", tk.END, text=f"Group: {name}", values=values, open=False, tags=("group",))
+                self.groups_set[group_id] = group
+
+            self.update_inventory_counter()
+            self.show_group_bar_chart()
+            self.show_group_bar_chart(is_set=True)
+            self.update_pack_suggestion_for_current_tab()
+            
 
     def on_item_select(self, event):
         
@@ -752,8 +801,3 @@ class DataFrameViewer(tk.Tk):
         if timeout:
             self.after(timeout, lambda: self.status_var.set(""))
 
-if __name__ == "__main__":
-    df = importer.read_json_file()
-    df = importer.clean_db(df)
-    app = DataFrameViewer(df)
-    app.mainloop()
