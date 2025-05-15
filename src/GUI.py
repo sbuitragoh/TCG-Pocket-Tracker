@@ -756,17 +756,17 @@ class DataFrameViewer(tk.Tk):
         card_id = card_id.split('-')[1].lstrip('0') if '-' in card_id else card_id
         card_rarity = row.get("rarity", "")
         label = self.img_label_set if widget == self.tree_set else self.img_label
-
+        is_checked = idx in self.inventory
         label.config(image="", text="Loading image...")
         label.image = None
 
         threading.Thread(
             target=self._fetch_and_update_image,
-            args=(card_name, card_id, label, card_rarity),
+            args=(card_name, card_id, label, card_rarity, is_checked),
             daemon=True
         ).start()
 
-    def _fetch_and_update_image(self, card_name, card_id, label, card_rarity):
+    def _fetch_and_update_image(self, card_name, card_id, label, card_rarity, is_checked):
         photo = None
         error_message = None
         try:
@@ -777,6 +777,8 @@ class DataFrameViewer(tk.Tk):
                 response = requests.get(url)
                 image = Image.open(io.BytesIO(response.content))
                 image = image.resize((300, 420), Image.LANCZOS if hasattr(Image, "LANCZOS") else Image.ANTIALIAS)
+                if not is_checked:
+                    image = image.convert('L')
                 photo = ImageTk.PhotoImage(image)
         except Exception as e:
             error_message = f"Image load error: {e}"
