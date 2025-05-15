@@ -846,7 +846,7 @@ class DataFrameViewer(tk.Tk):
             pack_name = pack_info[0]
             cards_in_pack = missing_cards[(missing_cards["pack"] == pack_name) | (
                 missing_cards["pack"] == "Both")]
-            prob_sum = [1.0, 1.0, 1.0, 1.0, 1.0]
+            prob_sum = 0.0
 
             for _, card in cards_in_pack.iterrows():
                 rarity = card["rarity"]
@@ -858,26 +858,34 @@ class DataFrameViewer(tk.Tk):
 
                 if row_idx >= len(prob_matrix):
                     continue
-
-                row_p = 1 - np.array(prob_matrix[row_idx])
+                
+                single_card_factor = 1 / self.df['rarity'].value_counts()[rarity]
+                row_p = 1 - (prob_matrix[rarity] * single_card_factor)
                 prob = np.concatenate((np.repeat(row_p[0], 3), row_p[1:]))
-                prob_sum *= prob
+                
+                prob_sum += (1 - np.prod(prob))
 
-            pack_probs[pack_name] = 1 - np.prod(prob_sum)
+            pack_probs[pack_name] = prob_sum
 
         return pack_probs
 
     def _display_pack_suggestion(self, pack_probs, is_set=False):
 
         max_prob = max(pack_probs.values())
+        
+        if max_prob > 1:
+            max_prob = 1
+
         best_packs = [p for p, v in pack_probs.items()
                       if abs(v - max_prob) < 1e-8]
         suggestion = ""
 
-        if len(best_packs) == 1:
-            suggestion += f"Suggestion: Open '{best_packs[0]}' for better chances of completion.\n"
+        if self.df[~self.df.index.isin(self.inventory)].empty:
+            suggestion += "You have all cards in your collection.\n"
+        elif len(best_packs) == 1:
+            suggestion += f"Suggestion: Open '{best_packs[0]}' with a probability of {max_prob*100:.2f} % to get a new card.\n"
         else:
-            suggestion += f"Suggestion: Open any of {', '.join(best_packs)}\n"
+            suggestion += f"Any pack would, most likely, get you a new card.\n"
 
         self._set_suggestion_label(suggestion.strip(), is_set)
 

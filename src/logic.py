@@ -16,5 +16,19 @@ def calc_prob():
 
     p_prob = np.array([prob_1to3_reg, prob_4_reg, prob_5_reg]).T / 100.0
     p_god = np.array(prob_1to5_g).T / 100.0
-
-    return prob_pack[0] * p_prob + np.array([prob_pack[1] * p_god]*3).T
+    prob_matrix = prob_pack[0] * p_prob + np.array([prob_pack[1] * p_god]*3).T
+    
+    prob_dict = {
+        'Common':prob_matrix[0],
+        'Uncommon':prob_matrix[1],
+        'Rare':prob_matrix[2],
+        'Rare EX':prob_matrix[3],
+        'Full Art':prob_matrix[4],
+        'Full Art EX/Support':prob_matrix[5],
+        'Special Full Art':prob_matrix[6],
+        'Immersive':prob_matrix[7],
+        'Gold Crown':prob_matrix[8],
+        'One shiny star':prob_matrix[9],
+        'Two shiny star':prob_matrix[10]
+    }
+    return prob_dict
