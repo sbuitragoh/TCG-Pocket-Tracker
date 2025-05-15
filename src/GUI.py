@@ -399,7 +399,6 @@ class DataFrameViewer(tk.Tk):
             self.show_group_bar_chart(is_set=True)
             self.update_pack_suggestion_for_current_tab()
             
-
     def on_item_select(self, event):
         
         widget = event.widget
@@ -755,7 +754,7 @@ class DataFrameViewer(tk.Tk):
         card_name = row.get("name", "")
         card_id = row.get("id", "")
         card_id = card_id.split('-')[1].lstrip('0') if '-' in card_id else card_id
-
+        card_rarity = row.get("rarity", "")
         label = self.img_label_set if widget == self.tree_set else self.img_label
 
         label.config(image="", text="Loading image...")
@@ -763,15 +762,15 @@ class DataFrameViewer(tk.Tk):
 
         threading.Thread(
             target=self._fetch_and_update_image,
-            args=(card_name, card_id, label),
+            args=(card_name, card_id, label, card_rarity),
             daemon=True
         ).start()
 
-    def _fetch_and_update_image(self, card_name, card_id, label):
+    def _fetch_and_update_image(self, card_name, card_id, label, card_rarity):
         photo = None
         error_message = None
         try:
-            url = img_aqcuisition.get_image(card_name=card_name, card_id=card_id)
+            url = img_aqcuisition.get_image(card_name=card_name, card_id=card_id, card_rarity=card_rarity)
             if not url:
                 error_message = "No image URL found"
             else:
@@ -800,4 +799,3 @@ class DataFrameViewer(tk.Tk):
         self.status_var.set(message)
         if timeout:
             self.after(timeout, lambda: self.status_var.set(""))
-
