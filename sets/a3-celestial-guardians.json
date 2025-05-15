@@ -4947,7 +4947,7 @@
     "weakness": "Fire",
     "abilities": [],
     "evolvesFrom": "Dartrix",
-    "rarity": "Full Art EX/Support"
+    "rarity": "Special Full Art"
   },
   {
     "id": "a3-199",
@@ -4974,7 +4974,7 @@
     "weakness": "Fire",
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art EX/Support"
+    "rarity": "Special Full Art"
   },
   {
     "id": "a3-200",
@@ -5009,7 +5009,7 @@
     "weakness": "Water",
     "abilities": [],
     "evolvesFrom": "Torracat",
-    "rarity": "Full Art EX/Support"
+    "rarity": "Special Full Art"
   },
   {
     "id": "a3-201",
@@ -5034,7 +5034,7 @@
     "weakness": "Metal",
     "abilities": [],
     "evolvesFrom": "Crabrawler",
-    "rarity": "Full Art EX/Support"
+    "rarity": "Special Full Art"
   },
   {
     "id": "a3-202",
@@ -5061,7 +5061,7 @@
     "weakness": "Lightning",
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art EX/Support"
+    "rarity": "Special Full Art"
   },
   {
     "id": "a3-203",
@@ -5088,7 +5088,7 @@
     "weakness": "Fighting",
     "abilities": [],
     "evolvesFrom": "Pikachu",
-    "rarity": "Full Art EX/Support"
+    "rarity": "Special Full Art"
   },
   {
     "id": "a3-204",
@@ -5119,7 +5119,7 @@
       }
     ],
     "evolvesFrom": "Cosmoem",
-    "rarity": "Full Art EX/Support"
+    "rarity": "Special Full Art"
   },
   {
     "id": "a3-205",
@@ -5149,7 +5149,7 @@
       }
     ],
     "evolvesFrom": null,
-    "rarity": "Full Art EX/Support"
+    "rarity": "Special Full Art"
   },
   {
     "id": "a3-206",
@@ -5176,7 +5176,7 @@
     "weakness": "Fighting",
     "abilities": [],
     "evolvesFrom": "Alolan Grimer",
-    "rarity": "Full Art EX/Support"
+    "rarity": "Special Full Art"
   },
   {
     "id": "a3-207",
@@ -5207,7 +5207,7 @@
       }
     ],
     "evolvesFrom": "Cosmoem",
-    "rarity": "Full Art EX/Support"
+    "rarity": "Special Full Art"
   },
   {
     "id": "a3-208",
