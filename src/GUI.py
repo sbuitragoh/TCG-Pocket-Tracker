@@ -13,28 +13,31 @@ from tkinter import ttk, filedialog
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from PIL import Image, ImageTk
 
+
 class DataFrameViewer(tk.Tk):
-    
+
     def __init__(self, dataframe):
         super().__init__()
         self.title("TCG Pocket Tracker")
         self.geometry('1280x720')
-        
+
         if 'pack' in dataframe.columns:
-            dataframe['pack'] = dataframe['pack'].where(dataframe['pack'].notna(), 'Both')
+            dataframe['pack'] = dataframe['pack'].where(
+                dataframe['pack'].notna(), 'Both')
 
         self.df = dataframe
-        self.set = set()  
+        self.set = set()
         self.group_var = tk.StringVar(self)
         self.group_var.set(self.df.columns[0])
         self.groups = None
         self.current_group = None
-        self.inventory = set()  
-        self.checkbox_vars = {}  
-        self.set_completion_rarities = ["Common", "Uncommon", "Rare", "Rare EX"]
+        self.inventory = set()
+        self.checkbox_vars = {}
+        self.set_completion_rarities = [
+            "Common", "Uncommon", "Rare", "Rare EX"]
         self.json_path = resource_path('sets/a3-celestial-guardians.json')
-        self.groups_all = {} 
-        self.groups_set = {} 
+        self.groups_all = {}
+        self.groups_set = {}
         self.create_menu()
         self.create_widgets()
         self.show_dataframe(self.df)
@@ -68,24 +71,28 @@ class DataFrameViewer(tk.Tk):
             if dfs:
                 self.df = pd.concat(dfs, ignore_index=True)
                 if 'pack' in self.df.columns:
-                    self.df['pack'] = self.df['pack'].where(self.df['pack'].notna(), 'Both')
+                    self.df['pack'] = self.df['pack'].where(
+                        self.df['pack'].notna(), 'Both')
                 self.group_var.set(self.df.columns[0])
                 self.inventory = set()
                 self.show_dataframe(self.df)
-                self.json_path = file_paths[0] if len(file_paths) == 1 else ";".join(file_paths)
+                self.json_path = file_paths[0] if len(
+                    file_paths) == 1 else ";".join(file_paths)
 
     def save_progress(self):
 
         file_path = filedialog.asksaveasfilename(
             defaultextension=".pif",
-            filetypes=[("Pokemon Inventory Files", "*.pif"), ("All Files", "*.*")]
+            filetypes=[("Pokemon Inventory Files", "*.pif"),
+                       ("All Files", "*.*")]
         )
 
         if file_path:
             try:
                 # Ensure self.json_path is set
                 if not getattr(self, "json_path", ""):
-                    self.json_path = resource_path('sets/a3-celestial-guardians.json')
+                    self.json_path = resource_path(
+                        'sets/a3-celestial-guardians.json')
                 with open(file_path, "w") as f:
                     # Save the current JSON path as the first line
                     f.write(f"#json_path={self.json_path}\n")
@@ -96,8 +103,9 @@ class DataFrameViewer(tk.Tk):
 
     def load_progress(self):
 
-        file_path = filedialog.askopenfilename(defaultextension=".pif", filetypes=[("Pokemon Inventory Files", "*.pif"), ("All Files", "*.*")])
-        
+        file_path = filedialog.askopenfilename(defaultextension=".pif", filetypes=[
+                                               ("Pokemon Inventory Files", "*.pif"), ("All Files", "*.*")])
+
         if not file_path:
             return
         try:
@@ -112,15 +120,15 @@ class DataFrameViewer(tk.Tk):
             return f.readlines()
 
     def _parse_progress_lines(self, lines):
-        
+
         json_path = ""
-        
+
         if lines and lines[0].startswith("#json_path="):
             json_path = lines[0].strip().split("=", 1)[1]
             lines = lines[1:]
-        
+
         indices = set()
-        
+
         for line in lines:
             line = line.strip()
             if line:
@@ -132,7 +140,7 @@ class DataFrameViewer(tk.Tk):
         return json_path, indices
 
     def _update_df_and_inventory(self, json_path, indices):
-        
+
         if json_path and getattr(self, "json_path", "") != json_path:
             try:
                 df = importer.read_json_file(json_path)
@@ -146,29 +154,31 @@ class DataFrameViewer(tk.Tk):
                 self.show_dataframe(self.df)
             except Exception as e:
                 self.set_status_message(f"Failed to load referenced JSON: {e}")
-        
+
         self.inventory = indices
-        
+
         if self.groups:
             self.on_group_change(self.group_var.get())
         else:
             self.show_dataframe(self.df)
 
     def create_widgets(self):
-        
+
         style = ttk.Style(self)
-        style.configure("Treeview", font = ("Arial", 12))
-        style.configure("Treeview.Heading", font = ("Arial", 12))
+        style.configure("Treeview", font=("Arial", 12))
+        style.configure("Treeview.Heading", font=("Arial", 12))
 
         top_frame = tk.Frame(self)
         top_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
 
         group_options = ["Checked"] + list(self.df.columns)
         self.group_var.set('Checked')
-        group_menu = ttk.Combobox(top_frame, textvariable=self.group_var, values=group_options, state="readonly")
+        group_menu = ttk.Combobox(
+            top_frame, textvariable=self.group_var, values=group_options, state="readonly")
         group_menu.pack(side=tk.LEFT, padx=5)
-        group_menu.bind("<<ComboboxSelected>>", lambda e: self.on_group_change(self.group_var.get()))
-        
+        group_menu.bind("<<ComboboxSelected>>",
+                        lambda e: self.on_group_change(self.group_var.get()))
+
         self.tab_control = ttk.Notebook(self)
         self.tab_control.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
@@ -183,18 +193,20 @@ class DataFrameViewer(tk.Tk):
             main_frame = tk.Frame(tab)
             main_frame.pack(fill=tk.BOTH, expand=True)
             self.main_frames[tab] = main_frame
-            
+
             columns = ["Inventory"] + list(self.df.columns)
-            tree = ttk.Treeview(main_frame, columns=columns, show="headings", selectmode="browse")
+            tree = ttk.Treeview(main_frame, columns=columns,
+                                show="headings", selectmode="browse")
             tree.heading("Inventory", text="✓")
             tree.column("Inventory", width=20, anchor="center")
             for col in self.df.columns:
                 tree.heading(col, text=col.capitalize())
                 longest_width = self.df[col].dropna().apply(len).max()
                 tree.column(col, width=longest_width * 10, anchor="center")
-            
+
             tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-            tree.bind("<<TreeviewSelect>>", lambda event:self.on_item_select(event))
+            tree.bind("<<TreeviewSelect>>",
+                      lambda event: self.on_item_select(event))
             tree.bind("<Button-1>", self.on_tree_click)
 
             if is_set:
@@ -202,12 +214,14 @@ class DataFrameViewer(tk.Tk):
             else:
                 self.tree = tree
 
-            scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=tree.yview)
+            scrollbar = ttk.Scrollbar(
+                main_frame, orient="vertical", command=tree.yview)
             tree.configure(yscroll=scrollbar.set)
             scrollbar.pack(side=tk.LEFT, fill=tk.Y)
 
             right_frame = tk.Frame(main_frame)
-            right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=False, padx=(5, 0))
+            right_frame.pack(side=tk.RIGHT, fill=tk.BOTH,
+                             expand=False, padx=(5, 0))
 
             right_notebook = ttk.Notebook(right_frame)
             right_notebook.pack(fill=tk.BOTH, expand=False)
@@ -215,9 +229,10 @@ class DataFrameViewer(tk.Tk):
             image_tab = tk.Frame(right_notebook)
             right_notebook.add(image_tab, text="Image Display")
 
-            img_label = tk.Label(image_tab, text="Card image will appear here.", font=("Arial", 12))
+            img_label = tk.Label(
+                image_tab, text="Card image will appear here.", font=("Arial", 12))
             img_label.pack(fill=tk.BOTH, expand=False, padx=10, pady=10)
-            
+
             if is_set:
                 self.img_label_set = img_label
             else:
@@ -225,9 +240,10 @@ class DataFrameViewer(tk.Tk):
 
             graph_tab = tk.Frame(right_notebook)
             right_notebook.add(graph_tab, text="Completion Chart")
-            chart_frame = tk.LabelFrame(graph_tab, text="Completion Chart", padx=10, pady=10)
+            chart_frame = tk.LabelFrame(
+                graph_tab, text="Completion Chart", padx=10, pady=10)
             chart_frame.pack(fill=tk.BOTH, expand=False, pady=5)
-            
+
             if is_set:
                 self.chart_frame_set = chart_frame
                 self.chart_canvas_set = None
@@ -236,41 +252,60 @@ class DataFrameViewer(tk.Tk):
                 self.chart_canvas = None
 
         bottom_main_frame = tk.Frame(self)
-        bottom_main_frame.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=False, padx=5, pady=5)
+        bottom_main_frame.pack(side=tk.BOTTOM, fill=tk.BOTH,
+                               expand=False, padx=5, pady=5)
 
         set_frame = tk.Frame(bottom_main_frame)
         set_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
 
-        set_completion_frame = tk.LabelFrame(set_frame, text="Set Completion", padx=5, pady=5, bg="#e8f5e9", fg="#1b5e20", labelanchor="n")
-        set_completion_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=False, padx=2, pady=2)
-        self.set_completion_label = tk.Label(set_completion_frame, text="", bg="#e8f5e9", fg="#1b5e20", font=("Arial", 11, "bold"), anchor="w", justify="left")
+        set_completion_frame = tk.LabelFrame(
+            set_frame, text="Set Completion", padx=5, pady=5, bg="#e8f5e9", fg="#1b5e20", labelanchor="n")
+        set_completion_frame.pack(
+            side=tk.TOP, fill=tk.BOTH, expand=False, padx=2, pady=2)
+        self.set_completion_label = tk.Label(set_completion_frame, text="", bg="#e8f5e9", fg="#1b5e20", font=(
+            "Arial", 11, "bold"), anchor="w", justify="left")
         self.set_completion_label.pack(anchor="w", padx=5, pady=2)
 
-        set_pack_completion_frame = tk.LabelFrame(set_frame, text="Set Pack Completion", padx=5, pady=5, bg="#e8f5e9", fg="#1b5e20", labelanchor="n")
-        set_pack_completion_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=2, pady=2)
-        self.set_pack_completion_frame = tk.Frame(set_pack_completion_frame, bg="#e8f5e9")
-        self.set_pack_completion_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=2)
+        set_pack_completion_frame = tk.LabelFrame(
+            set_frame, text="Set Pack Completion", padx=5, pady=5, bg="#e8f5e9", fg="#1b5e20", labelanchor="n")
+        set_pack_completion_frame.pack(
+            side=tk.TOP, fill=tk.BOTH, expand=True, padx=2, pady=2)
+        self.set_pack_completion_frame = tk.Frame(
+            set_pack_completion_frame, bg="#e8f5e9")
+        self.set_pack_completion_frame.pack(
+            fill=tk.BOTH, expand=True, padx=5, pady=2)
 
         inventory_frame = tk.Frame(bottom_main_frame)
-        inventory_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(5, 5))
+        inventory_frame.pack(side=tk.LEFT, fill=tk.BOTH,
+                             expand=True, padx=(5, 5))
 
-        inventory_main_frame = tk.LabelFrame(inventory_frame, text="Inventory", padx=5, pady=5, bg="#e3f2fd", fg="#1565c0", labelanchor="n")
-        inventory_main_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=False, padx=2, pady=2)
+        inventory_main_frame = tk.LabelFrame(
+            inventory_frame, text="Inventory", padx=5, pady=5, bg="#e3f2fd", fg="#1565c0", labelanchor="n")
+        inventory_main_frame.pack(
+            side=tk.TOP, fill=tk.BOTH, expand=False, padx=2, pady=2)
 
-        self.general_inventory_label = tk.Label(inventory_main_frame, text="", bg="#e3f2fd", fg="#1565c0", font=("Arial", 11, "bold"))
+        self.general_inventory_label = tk.Label(
+            inventory_main_frame, text="", bg="#e3f2fd", fg="#1565c0", font=("Arial", 11, "bold"))
         self.general_inventory_label.pack(anchor="w", padx=5, pady=2)
 
-        inventory_packs_frame = tk.LabelFrame(inventory_frame, text="Inventory Packs", padx=5, pady=5, bg="#e3f2fd", fg="#1565c0", labelanchor="n")
-        inventory_packs_frame.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True, padx=2, pady=2)
-        self.pack_inventory_frame = tk.Frame(inventory_packs_frame, bg="#e3f2fd")
-        self.pack_inventory_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=2)
+        inventory_packs_frame = tk.LabelFrame(
+            inventory_frame, text="Inventory Packs", padx=5, pady=5, bg="#e3f2fd", fg="#1565c0", labelanchor="n")
+        inventory_packs_frame.pack(
+            side=tk.BOTTOM, fill=tk.BOTH, expand=True, padx=2, pady=2)
+        self.pack_inventory_frame = tk.Frame(
+            inventory_packs_frame, bg="#e3f2fd")
+        self.pack_inventory_frame.pack(
+            fill=tk.BOTH, expand=True, padx=5, pady=2)
 
         suggestion_frame = tk.Frame(bottom_main_frame)
-        suggestion_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(5, 0))
+        suggestion_frame.pack(side=tk.LEFT, fill=tk.BOTH,
+                              expand=True, padx=(5, 0))
 
-        suggestion_main_frame = tk.LabelFrame(suggestion_frame, text="Which pack should you open?", padx=10, pady=10)
+        suggestion_main_frame = tk.LabelFrame(
+            suggestion_frame, text="Which pack should you open?", padx=10, pady=10)
         suggestion_main_frame.pack(fill=tk.BOTH, expand=True, pady=5)
-        suggestion_label = tk.Label(suggestion_main_frame, text="", font=("Arial", 12, "bold"), fg="#1565c0")
+        suggestion_label = tk.Label(suggestion_main_frame, text="", font=(
+            "Arial", 12, "bold"), fg="#1565c0")
         suggestion_label.pack(fill=tk.BOTH, expand=True)
         self.suggestion_label = suggestion_label
         self.suggestion_label_set = suggestion_label
@@ -278,15 +313,17 @@ class DataFrameViewer(tk.Tk):
         self.tab_control.bind("<<NotebookTabChanged>>", self.on_tab_change)
 
         self.status_var = tk.StringVar()
-        self.status_bar = tk.Label(self, textvariable=self.status_var, bd=1, relief=tk.SUNKEN, anchor="w", font=("Arial", 10), bg="#f5f5f5")
+        self.status_bar = tk.Label(self, textvariable=self.status_var, bd=1,
+                                   relief=tk.SUNKEN, anchor="w", font=("Arial", 10), bg="#f5f5f5")
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
 
     def show_dataframe(self, df):
-        
+
         set_df = self._get_set_df(df)
         self.set = set(set_df.index)
         self._show_tree(self.tree, df, self.chart_frame, is_set=False)
-        self._show_tree(self.tree_set, set_df, self.chart_frame_set, is_set=True)
+        self._show_tree(self.tree_set, set_df,
+                        self.chart_frame_set, is_set=True)
         self.groups = None
         self.update_inventory_counter()
         self.show_group_bar_chart()
@@ -301,39 +338,43 @@ class DataFrameViewer(tk.Tk):
         if not hasattr(self, 'checkbox_vars_all'):
             self.checkbox_vars_all = {}
             self.checkbox_vars_set = {}
-        
+
         checkbox_vars = self.checkbox_vars_set if is_set else self.checkbox_vars_all
         checkbox_vars.clear()
         checked = []
         unchecked = []
-        
+
         for idx, row in df.iterrows():
             inv = 1 if idx in self.inventory else 0
             if inv:
                 checked.append((idx, row))
             else:
                 unchecked.append((idx, row))
-        
-        checked_group_id = tree.insert("", tk.END, values=["", "Checked"] + [""] * (len(self.df.columns) - 1), tags=("checked_group",))
-        
+
+        checked_group_id = tree.insert("", tk.END, values=[
+                                       "", "Checked"] + [""] * (len(self.df.columns) - 1), tags=("checked_group",))
+
         for idx, row in checked:
             values = [u"☑"] + [row[col] for col in self.df.columns]
-            item_id = tree.insert(checked_group_id, tk.END, values=values, tags=("item",))
+            item_id = tree.insert(checked_group_id, tk.END,
+                                  values=values, tags=("item",))
             checkbox_vars[item_id] = tk.IntVar(value=1)
             tree.set(item_id, "Inventory", u"☑")
-        
-        unchecked_group_id = tree.insert("", tk.END, values=["", "Unchecked"] + [""] * (len(self.df.columns) - 1), tags=("unchecked_group",))
-        
+
+        unchecked_group_id = tree.insert("", tk.END, values=[
+                                         "", "Unchecked"] + [""] * (len(self.df.columns) - 1), tags=("unchecked_group",))
+
         for idx, row in unchecked:
             values = [u"☐"] + [row[col] for col in self.df.columns]
-            item_id = tree.insert(unchecked_group_id, tk.END, values=values, tags=("item",))
+            item_id = tree.insert(unchecked_group_id,
+                                  tk.END, values=values, tags=("item",))
             checkbox_vars[item_id] = tk.IntVar(value=0)
             tree.set(item_id, "Inventory", u"☐")
 
     def on_tab_change(self, event):
 
         tab = self.tab_control.select()
-        
+
         if tab == str(self.tab_all):
             self.show_group_bar_chart(is_set=False)
             self.update_pack_suggestion_for_current_tab()
@@ -351,15 +392,17 @@ class DataFrameViewer(tk.Tk):
             self.tree.delete(*self.tree.get_children())
             self.checkbox_vars_all = {}
             self.groups_all = {}
-           
+
             for name, group in groups.items():
                 group_owned = len(group)
                 group_total = len(group)
                 group_display = f"{name} ({group_owned}/{group_total})"
-                values = ["", group_display] + [""] * (len(self.df.columns) - 1)
-                group_id = self.tree.insert("", tk.END, text=f"Group: {name}", values=values, open=False, tags=("group",))
+                values = ["", group_display] + \
+                    [""] * (len(self.df.columns) - 1)
+                group_id = self.tree.insert(
+                    "", tk.END, text=f"Group: {name}", values=values, open=False, tags=("group",))
                 self.groups_all[group_id] = group
-            
+
             self.groups = self.groups_all  # <-- Set self.groups!
 
             set_df = self._get_set_df(self.df)
@@ -370,13 +413,15 @@ class DataFrameViewer(tk.Tk):
             self.tree_set.delete(*self.tree_set.get_children())
             self.checkbox_vars_set = {}
             self.groups_set = {}
-            
+
             for name, group in groups_set.items():
                 group_owned = len(group)
                 group_total = len(group)
                 group_display = f"{name} ({group_owned}/{group_total})"
-                values = ["", group_display] + [""] * (len(self.df.columns) - 1)
-                group_id = self.tree_set.insert("", tk.END, text=f"Group: {name}", values=values, open=False, tags=("group",))
+                values = ["", group_display] + \
+                    [""] * (len(self.df.columns) - 1)
+                group_id = self.tree_set.insert(
+                    "", tk.END, text=f"Group: {name}", values=values, open=False, tags=("group",))
                 self.groups_set[group_id] = group
 
             self.update_inventory_counter()
@@ -389,15 +434,17 @@ class DataFrameViewer(tk.Tk):
             self.tree.delete(*self.tree.get_children())
             self.checkbox_vars_all = {}
             self.groups_all = {}
-            
+
             for name, group in grouped:
                 group_owned = sum(idx in self.inventory for idx in group.index)
                 group_total = len(group)
                 group_display = f"{name} ({group_owned}/{group_total})"
-                values = ["", group_display] + [""] * (len(self.df.columns) - 1)
-                group_id = self.tree.insert("", tk.END, text=f"Group: {name}", values=values, open=False, tags=("group",))
+                values = ["", group_display] + \
+                    [""] * (len(self.df.columns) - 1)
+                group_id = self.tree.insert(
+                    "", tk.END, text=f"Group: {name}", values=values, open=False, tags=("group",))
                 self.groups_all[group_id] = group
-            
+
             self.groups = self.groups_all
 
             set_df = self._get_set_df(self.df)
@@ -405,56 +452,58 @@ class DataFrameViewer(tk.Tk):
             self.tree_set.delete(*self.tree_set.get_children())
             self.checkbox_vars_set = {}
             self.groups_set = {}
-            
+
             for name, group in grouped_set:
                 group_owned = sum(idx in self.inventory for idx in group.index)
                 group_total = len(group)
                 group_display = f"{name} ({group_owned}/{group_total})"
-                values = ["", group_display] + [""] * (len(self.df.columns) - 1)
-                group_id = self.tree_set.insert("", tk.END, text=f"Group: {name}", values=values, open=False, tags=("group",))
+                values = ["", group_display] + \
+                    [""] * (len(self.df.columns) - 1)
+                group_id = self.tree_set.insert(
+                    "", tk.END, text=f"Group: {name}", values=values, open=False, tags=("group",))
                 self.groups_set[group_id] = group
 
             self.update_inventory_counter()
             self.show_group_bar_chart()
             self.show_group_bar_chart(is_set=True)
             self.update_pack_suggestion_for_current_tab()
-            
+
     def on_item_select(self, event=None):
-        
+
         widget = event.widget
         selected = widget.selection()
-        
+
         if not selected:
             return
-        
+
         item_id = selected[0]
-        
+
         if widget == self.tree:
             groups = self.groups_all
         elif widget == self.tree_set:
             groups = self.groups_set
         else:
             return
-        
+
         if groups and item_id in groups:
             self.handle_group_selection(item_id, widget, groups)
         else:
             self.handle_item_selection()
-        
+
         idx = self.get_df_index_from_tree_item(item_id, widget)
-        
+
         if idx is not None:
             self.display_card_image(idx, widget)
 
     def handle_group_selection(self, item_id, tree_widget, groups):
-        
+
         group_df = groups[item_id]
-       
+
         if not tree_widget.get_children(item_id):
             self.expand_group(item_id, group_df, tree_widget)
         else:
             self.collapse_group(item_id, tree_widget)
-      
+
         self.current_group = group_df
         self.update_inventory_counter()
 
@@ -462,7 +511,8 @@ class DataFrameViewer(tk.Tk):
 
         for idx, row in group_df.iterrows():
             inv = 1 if idx in self.inventory else 0
-            values = [u"☑" if inv else u"☐"] + [row[col] for col in self.df.columns]
+            values = [u"☑" if inv else u"☐"] + [row[col]
+                                                for col in self.df.columns]
             tree_widget.insert(item_id, tk.END, values=values, tags=("item",))
 
     def collapse_group(self, item_id, tree_widget):
@@ -476,38 +526,38 @@ class DataFrameViewer(tk.Tk):
         self.update_inventory_counter()
 
     def on_tree_click(self, event):
-        
+
         widget = event.widget
         region = widget.identify("region", event.x, event.y)
-        
+
         if region != "cell":
             return
-        
+
         col = widget.identify_column(event.x)
-        
+
         if col != "#1":
             return
-        
+
         item_id = widget.identify_row(event.y)
-        
+
         if not item_id or "item" not in widget.item(item_id, "tags"):
             return
-        
+
         idx = self.get_df_index_from_tree_item(item_id, widget)
-        
+
         if idx is None:
             return
-        
+
         if idx in self.inventory:
             self.inventory.remove(idx)
             widget.set(item_id, "Inventory", u"☐")
         else:
             self.inventory.add(idx)
             widget.set(item_id, "Inventory", u"☑")
-        
+
         if self.groups and widget == self.tree:
             parent_id = widget.parent(item_id)
-            
+
             if parent_id in self.groups:
                 group_df = self.groups[parent_id]
                 group_owned = sum(i in self.inventory for i in group_df.index)
@@ -519,7 +569,7 @@ class DataFrameViewer(tk.Tk):
                 new_values = list(values)
                 new_values[1] = group_display
                 widget.item(parent_id, values=new_values)
-        
+
         self.update_inventory_counter()
         self.update_pack_suggestion_for_current_tab()
 
@@ -527,9 +577,9 @@ class DataFrameViewer(tk.Tk):
 
         if tree_widget is None:
             tree_widget = self.tree
-        
+
         parent = tree_widget.parent(item_id)
-        
+
         if parent and self.groups and parent in self.groups and tree_widget == self.tree:
             group_df = self.groups[parent]
             values = tree_widget.item(item_id, "values")[1:]
@@ -544,22 +594,23 @@ class DataFrameViewer(tk.Tk):
         return None
 
     def show_group_bar_chart(self, is_set=False):
-        
+
         group_col = self.group_var.get()
-        
+
         if group_col.lower() in ["id", "name"]:
             self.clear_chart(is_set)
             return
-        
+
         df = self._get_set_df(self.df) if is_set else self.df
-        
+
         if group_col not in df.columns:
             self.clear_chart(is_set)
             return
 
         owned_mask = df.index.isin(self.inventory)
         group_counts = df[group_col].value_counts().sort_index()
-        owned_counts = df[owned_mask][group_col].value_counts().reindex(group_counts.index, fill_value=0)
+        owned_counts = df[owned_mask][group_col].value_counts().reindex(
+            group_counts.index, fill_value=0)
         missing_counts = group_counts - owned_counts
 
         total_counts = group_counts
@@ -568,7 +619,8 @@ class DataFrameViewer(tk.Tk):
 
         fig, ax = plt.subplots(figsize=(5, max(4, len(group_counts) * 0.6)))
         ax.barh(group_counts.index, owned_pct, label="Owned", color="#4caf50")
-        ax.barh(group_counts.index, missing_pct, left=owned_pct, label="Missing", color="#e57373")
+        ax.barh(group_counts.index, missing_pct, left=owned_pct,
+                label="Missing", color="#e57373")
         ax.set_xlabel("Percentage (%)")
         ax.set_ylabel(group_col.capitalize())
         ax.set_xlim(0, 100)
@@ -580,7 +632,8 @@ class DataFrameViewer(tk.Tk):
         if is_set:
             if getattr(self, "chart_canvas_set", None):
                 self.chart_canvas_set.get_tk_widget().destroy()
-            self.chart_canvas_set = FigureCanvasTkAgg(fig, master=self.chart_frame_set)
+            self.chart_canvas_set = FigureCanvasTkAgg(
+                fig, master=self.chart_frame_set)
             self.chart_canvas_set.draw()
             self.chart_canvas_set.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         else:
@@ -618,7 +671,7 @@ class DataFrameViewer(tk.Tk):
     def _update_set_completion(self):
 
         rarities = self.set_completion_rarities
-        
+
         if "rarity" in self.df.columns:
             set_df = self.df[self.df["rarity"].isin(rarities)]
             set_total = len(set_df)
@@ -630,31 +683,36 @@ class DataFrameViewer(tk.Tk):
             self._update_set_pack_completion(set_df)
         else:
             self.set_completion_label.config(text="No rarity data available.")
-            self._clear_set_pack_completion("No rarity data available.", "#e8f5e9")
+            self._clear_set_pack_completion(
+                "No rarity data available.", "#e8f5e9")
 
     def _update_set_pack_completion(self, set_df):
 
         for widget in self.set_pack_completion_frame.winfo_children():
             widget.destroy()
-        
+
         if "pack" in self.df.columns:
             pack_counts = set_df["pack"].value_counts()
-            owned_packs = set_df[set_df.index.isin(self.inventory)]["pack"].value_counts()
+            owned_packs = set_df[set_df.index.isin(
+                self.inventory)]["pack"].value_counts()
             self.pack_completion_data = []
-            
+
             for pack in pack_counts.index:
                 owned = owned_packs.get(pack, 0)
                 total_pack = pack_counts[pack]
                 missing = total_pack - owned
                 color = "#1c9625" if missing == 0 else "#b9c4ba"
                 text = f"{pack}: {owned}/{total_pack} (missing: {missing})"
-                lbl = tk.Label(self.set_pack_completion_frame, text=text, bg=color, font=("Arial", 10), anchor="w")
+                lbl = tk.Label(self.set_pack_completion_frame,
+                               text=text, bg=color, font=("Arial", 10), anchor="w")
                 lbl.pack(side=tk.TOP, anchor="w", fill=tk.X, padx=2, pady=1)
-                self.pack_completion_data.append((pack, owned, total_pack, missing))
-            
+                self.pack_completion_data.append(
+                    (pack, owned, total_pack, missing))
+
             self.update_pack_suggestion_for_current_tab()
         else:
-            self._clear_set_pack_completion("No pack data available.", "#e8f5e9")
+            self._clear_set_pack_completion(
+                "No pack data available.", "#e8f5e9")
             self.pack_completion_data = []
             self.update_pack_suggestion_for_current_tab()
 
@@ -662,7 +720,7 @@ class DataFrameViewer(tk.Tk):
 
         for widget in self.set_pack_completion_frame.winfo_children():
             widget.destroy()
-       
+
         lbl = tk.Label(self.set_pack_completion_frame, text=text, bg=bg)
         lbl.pack(side=tk.TOP, anchor="w", fill=tk.X, padx=2, pady=1)
         self.pack_completion_data = []
@@ -673,27 +731,31 @@ class DataFrameViewer(tk.Tk):
         total = len(self.df)
         owned = len(self.inventory)
         missing = total - owned
-        self.general_inventory_label.config(text=f"Inventory: {owned} / {total} (missing: {missing})")
+        self.general_inventory_label.config(
+            text=f"Inventory: {owned} / {total} (missing: {missing})")
 
     def _update_inventory_by_pack(self):
 
         for widget in self.pack_inventory_frame.winfo_children():
             widget.destroy()
-        
+
         if 'pack' in self.df.columns:
             pack_counts = self.df['pack'].value_counts()
-            owned_packs = self.df[self.df.index.isin(self.inventory)]['pack'].value_counts()
-            
+            owned_packs = self.df[self.df.index.isin(
+                self.inventory)]['pack'].value_counts()
+
             for pack in pack_counts.index:
                 owned = owned_packs.get(pack, 0)
                 total_pack = pack_counts[pack]
                 missing = total_pack - owned
                 color = "#0a78f4" if missing == 0 else "#b5c1ca"
                 text = f"{pack}: {owned}/{total_pack} (missing: {missing})"
-                lbl = tk.Label(self.pack_inventory_frame, text=text, bg=color, font=("Arial", 10), anchor="w")
+                lbl = tk.Label(self.pack_inventory_frame, text=text,
+                               bg=color, font=("Arial", 10), anchor="w")
                 lbl.pack(side=tk.TOP, anchor="w", fill=tk.X, padx=2, pady=1)
         else:
-            lbl = tk.Label(self.pack_inventory_frame, text="No pack data available.", bg="#e3f2fd")
+            lbl = tk.Label(self.pack_inventory_frame,
+                           text="No pack data available.", bg="#e3f2fd")
             lbl.pack(side=tk.TOP, anchor="w", fill=tk.X, padx=2, pady=1)
 
     def update_pack_suggestion_for_current_tab(self):
@@ -705,9 +767,10 @@ class DataFrameViewer(tk.Tk):
     def update_pack_suggestion(self, is_set=False):
 
         packs = self._get_incomplete_packs(is_set=is_set)
-        
+
         if not packs:
-            self._set_suggestion_label("Congratulations! All packs are complete.", is_set)
+            self._set_suggestion_label(
+                "Congratulations! All packs are complete.", is_set)
             return
 
         if "pack" not in self.df.columns or "rarity" not in self.df.columns:
@@ -721,13 +784,17 @@ class DataFrameViewer(tk.Tk):
             df = self.df
             relevant_indices = set(self.df.index)
 
-        missing_cards = df[(~df.index.isin(self.inventory)) & (df.index.isin(relevant_indices))]
-        missing_cards = missing_cards[missing_cards["rarity"].notna() & missing_cards["pack"].notna()]
+        missing_cards = df[(~df.index.isin(self.inventory))
+                           & (df.index.isin(relevant_indices))]
+        missing_cards = missing_cards[missing_cards["rarity"].notna(
+        ) & missing_cards["pack"].notna()]
         rarity_to_row = self._get_rarity_to_row()
-        pack_probs = self._calculate_pack_probabilities(packs, missing_cards, rarity_to_row)
+        pack_probs = self._calculate_pack_probabilities(
+            packs, missing_cards, rarity_to_row)
 
         if not pack_probs:
-            self._set_suggestion_label("No probability data available.", is_set)
+            self._set_suggestion_label(
+                "No probability data available.", is_set)
             return
 
         self._display_pack_suggestion(pack_probs, is_set)
@@ -740,30 +807,31 @@ class DataFrameViewer(tk.Tk):
             self.suggestion_label.config(text=text)
 
     def _get_incomplete_packs(self, is_set=False):
-        
+
         if is_set:
             return [p for p in getattr(self, 'pack_completion_data', []) if p[0] != "Both" and p[3] > 0]
         else:
-            
+
             if "pack" not in self.df.columns:
                 return []
-            
+
             pack_counts = self.df["pack"].value_counts()
-            owned_packs = self.df[self.df.index.isin(self.inventory)]["pack"].value_counts()
+            owned_packs = self.df[self.df.index.isin(
+                self.inventory)]["pack"].value_counts()
             incomplete = []
-            
+
             for pack in pack_counts.index:
                 owned = owned_packs.get(pack, 0)
                 total = pack_counts[pack]
                 missing = total - owned
-                
+
                 if pack != "Both" and missing > 0:
                     incomplete.append((pack, owned, total, missing))
-        
+
         return incomplete
 
     def _get_rarity_to_row(self):
-        
+
         rarity_order = list(self.df['rarity'].dropna().unique())
         return {r: i for i, r in enumerate(rarity_order)}
 
@@ -771,46 +839,48 @@ class DataFrameViewer(tk.Tk):
 
         pack_probs = {}
         prob_matrix = logic.calc_prob()
-        
+
         for pack_info in packs:
             pack_name = pack_info[0]
-            cards_in_pack = missing_cards[(missing_cards["pack"] == pack_name) | (missing_cards["pack"] == "Both")]
+            cards_in_pack = missing_cards[(missing_cards["pack"] == pack_name) | (
+                missing_cards["pack"] == "Both")]
             prob_sum = [1.0, 1.0, 1.0, 1.0, 1.0]
-            
+
             for _, card in cards_in_pack.iterrows():
                 rarity = card["rarity"]
-                
+
                 if rarity not in rarity_to_row:
                     continue
-                
+
                 row_idx = rarity_to_row[rarity]
-                
+
                 if row_idx >= len(prob_matrix):
                     continue
-                
+
                 row_p = 1 - np.array(prob_matrix[row_idx])
                 prob = np.concatenate((np.repeat(row_p[0], 3), row_p[1:]))
                 prob_sum *= prob
 
             pack_probs[pack_name] = 1 - np.prod(prob_sum)
-        
+
         return pack_probs
 
     def _display_pack_suggestion(self, pack_probs, is_set=False):
-        
+
         max_prob = max(pack_probs.values())
-        best_packs = [p for p, v in pack_probs.items() if abs(v - max_prob) < 1e-8]
+        best_packs = [p for p, v in pack_probs.items()
+                      if abs(v - max_prob) < 1e-8]
         suggestion = ""
-        
+
         if len(best_packs) == 1:
             suggestion += f"Suggestion: Open '{best_packs[0]}' for better chances of completion.\n"
         else:
             suggestion += f"Suggestion: Open any of {', '.join(best_packs)}\n"
-        
+
         self._set_suggestion_label(suggestion.strip(), is_set)
 
     def display_card_image(self, idx, widget):
-        
+
         try:
             row = self.df.loc[idx]
         except Exception:
@@ -818,7 +888,8 @@ class DataFrameViewer(tk.Tk):
 
         card_name = row.get("name", "")
         card_id = row.get("id", "")
-        card_id = card_id.split('-')[1].lstrip('0') if '-' in card_id else card_id
+        card_id = card_id.split(
+            '-')[1].lstrip('0') if '-' in card_id else card_id
         card_rarity = row.get("rarity", "")
         label = self.img_label_set if widget == self.tree_set else self.img_label
         is_checked = idx in self.inventory
@@ -832,19 +903,21 @@ class DataFrameViewer(tk.Tk):
         ).start()
 
     def _fetch_and_update_image(self, card_name, card_id, label, card_rarity, is_checked):
-       
+
         photo = None
         error_message = None
-        
+
         try:
-            url = img_aqcuisition.get_image(card_name=card_name, card_id=card_id, card_rarity=card_rarity)
-            
+            url = img_aqcuisition.get_image(
+                card_name=card_name, card_id=card_id, card_rarity=card_rarity)
+
             if not url:
                 error_message = "No image URL found"
             else:
                 response = requests.get(url)
                 image = Image.open(io.BytesIO(response.content))
-                image = image.resize((300, 420), Image.LANCZOS if hasattr(Image, "LANCZOS") else Image.ANTIALIAS)
+                image = image.resize((300, 420), Image.LANCZOS if hasattr(
+                    Image, "LANCZOS") else Image.ANTIALIAS)
                 if not is_checked:
                     image = image.convert('L')
                 photo = ImageTk.PhotoImage(image)
@@ -852,7 +925,7 @@ class DataFrameViewer(tk.Tk):
             error_message = f"Image load error: {e}"
 
         def update_label():
-            
+
             if error_message:
                 self.set_status_message(error_message)
                 label.config(image="", text="Image not available")
@@ -867,8 +940,8 @@ class DataFrameViewer(tk.Tk):
         self.after(0, update_label)
 
     def set_status_message(self, message, timeout=5000):
-        
+
         self.status_var.set(message)
-        
+
         if timeout:
             self.after(timeout, lambda: self.status_var.set(""))
