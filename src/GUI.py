@@ -46,10 +46,12 @@ class DataFrameViewer(tk.Tk):
 
         menubar = tk.Menu(self)
         filemenu = tk.Menu(menubar, tearoff=0)
-        filemenu.add_command(label="Import JSON", command=self.import_json)
-        filemenu.add_command(label="Save Progress", command=self.save_progress)
         filemenu.add_command(label="Load Progress", command=self.load_progress)
+        filemenu.add_command(label="Save Progress", command=self.save_progress)
         menubar.add_cascade(label="File", menu=filemenu)
+        jsonmenu = tk.Menu(menubar, tearoff=0)
+        jsonmenu.add_command(label="Import JSON", command=self.import_json)
+        menubar.add_cascade(label="JSON", menu=jsonmenu)
         self.config(menu=menubar)
 
     def import_json(self):
