@@ -37,6 +37,8 @@ def extract_image_url(soup, card_name_parsed, card_rarity):
         infobox = soup.find(title=rarity_anchors[card_rarity])
     else:
         infobox = soup.find(title=card_rarity)
+    if not infobox:
+        infobox = soup.find("a", href=lambda href: href and card_name_parsed in href)
     
     if infobox:
         img = infobox.find("img")
