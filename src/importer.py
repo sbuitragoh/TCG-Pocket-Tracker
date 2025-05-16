@@ -1,5 +1,5 @@
 import pandas as pd
-from venv_tcg.utils import resource_path
+from src.utils import resource_path
 
 
 def read_json_file(file_path: str = 'sets/a3-celestial-guardians.json') -> pd.DataFrame:
