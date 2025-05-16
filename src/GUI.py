@@ -19,11 +19,16 @@ class DataFrameViewer(tk.Tk):
     def __init__(self, dataframe):
         super().__init__()
         self.title("TCG Pocket Tracker")
+        self.state('zoomed')
         self.geometry('1280x720')
 
         if 'pack' in dataframe.columns:
-            dataframe['pack'] = dataframe['pack'].where(
-                dataframe['pack'].notna(), 'Both')
+            if len(dataframe['pack'].unique()) != 1:
+                dataframe['pack'] = dataframe['pack'].where(
+                    dataframe['pack'].notna(), 'Both')
+            else:
+                dataframe['pack'] = dataframe['pack'].where(
+                    dataframe['pack'].notna(), 'Single')
 
         self.df = dataframe
         self.set = set()
@@ -73,8 +78,13 @@ class DataFrameViewer(tk.Tk):
             if dfs:
                 self.df = pd.concat(dfs, ignore_index=True)
                 if 'pack' in self.df.columns:
-                    self.df['pack'] = self.df['pack'].where(
-                        self.df['pack'].notna(), 'Both')
+                    if len(self.df['pack'].unique()) != 1:
+                        self.df['pack'] = self.df['pack'].where(
+                            self.df['pack'].notna(), 'Both')
+                    else:
+                        self.df['pack'] = self.df['pack'].where(
+                            self.df['pack'].notna(), 'Single')
+                    
                 self.group_var.set(self.df.columns[0])
                 self.inventory = set()
                 self.show_dataframe(self.df)
@@ -147,9 +157,13 @@ class DataFrameViewer(tk.Tk):
             try:
                 df = importer.read_json_file(json_path)
                 df = importer.clean_db(df)
-                # --- Fix: Normalize 'pack' column here ---
+                
                 if 'pack' in df.columns:
-                    df['pack'] = df['pack'].where(df['pack'].notna(), 'Both')
+                    if len(df['pack'].unique()) != 1:
+                        df['pack'] = df['pack'].where(df['pack'].notna(), 'Both')
+                    else:
+                        df['pack'] = df['pack'].where(df['pack'].notna(), 'Single')
+                
                 self.df = df
                 self.json_path = json_path
                 self.group_var.set(self.df.columns[0])
@@ -195,56 +209,76 @@ class DataFrameViewer(tk.Tk):
             main_frame = tk.Frame(tab)
             main_frame.pack(fill=tk.BOTH, expand=True)
             self.main_frames[tab] = main_frame
+            
+            tree_frame = tk.Frame(main_frame)
+            tree_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            tree_frame.config(width=700)
+            tree_frame.grid_propagate(False)
+            tree_frame.grid_columnconfigure(0, weight=1)
+            tree_frame.grid_rowconfigure(0, weight=1)
 
             columns = ["Inventory"] + list(self.df.columns)
-            tree = ttk.Treeview(main_frame, columns=columns,
+            tree = ttk.Treeview(tree_frame, columns=columns,
                                 show="headings", selectmode="browse")
             tree.heading("Inventory", text="✓")
-            tree.column("Inventory", width=20, anchor="center")
+            tree.column("Inventory", width=50, anchor="center", stretch=False)
+            
             for col in self.df.columns:
                 tree.heading(col, text=col.capitalize())
-                longest_width = self.df[col].dropna().apply(len).max()
-                tree.column(col, width=longest_width * 10, anchor="center")
+                longest_width = self.df[col].dropna().apply(len).max() if not self.df[col].empty else 10
+                tree.column(col, width=min(longest_width * 20, 150), anchor="center", stretch=False)
 
-            tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-            tree.bind("<<TreeviewSelect>>",
-                      lambda event: self.on_item_select(event))
+
+            v_scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
+            tree.configure(yscroll=v_scrollbar.set)
+            
+            h_scrollbar = ttk.Scrollbar(tree_frame, orient="horizontal", command=tree.xview)
+            tree.configure(xscroll=h_scrollbar.set)
+            
+            tree.grid(row=0, column=0, sticky="nsew")
+            v_scrollbar.grid(row=0, column=1, sticky="ns")
+            h_scrollbar.grid(row=1, column=0, sticky="ew")
+            
+            tree.bind("<<TreeviewSelect>>", lambda event: self.on_item_select(event))
             tree.bind("<Button-1>", self.on_tree_click)
 
             if is_set:
                 self.tree_set = tree
             else:
                 self.tree = tree
-
-            scrollbar = ttk.Scrollbar(
-                main_frame, orient="vertical", command=tree.yview)
-            tree.configure(yscroll=scrollbar.set)
-            scrollbar.pack(side=tk.LEFT, fill=tk.Y)
-
-            right_frame = tk.Frame(main_frame)
-            right_frame.pack(side=tk.RIGHT, fill=tk.BOTH,
-                             expand=False, padx=(5, 0))
+                
+            right_frame = tk.Frame(main_frame, width=500)  
+            right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, padx=(5, 0))
+            right_frame.pack_propagate(False)  
 
             right_notebook = ttk.Notebook(right_frame)
-            right_notebook.pack(fill=tk.BOTH, expand=False)
+            right_notebook.pack(fill=tk.BOTH, expand=True)
 
-            image_tab = tk.Frame(right_notebook)
+            image_tab = tk.Frame(right_notebook, width=500, height=420)
             right_notebook.add(image_tab, text="Image Display")
+            image_tab.pack_propagate(False)  
 
+            img_container = tk.Frame(image_tab, width=480, height=420)
+            img_container.pack(pady=10)
+            img_container.pack_propagate(False)  
+            
             img_label = tk.Label(
-                image_tab, text="Card image will appear here.", font=("Arial", 12))
-            img_label.pack(fill=tk.BOTH, expand=False, padx=10, pady=10)
+                img_container, text="Card image will appear here.", font=("Arial", 12))
+            img_label.pack(fill=tk.BOTH, expand=True)
 
             if is_set:
                 self.img_label_set = img_label
             else:
                 self.img_label = img_label
 
-            graph_tab = tk.Frame(right_notebook)
+            graph_tab = tk.Frame(right_notebook, width=500, height=420)
             right_notebook.add(graph_tab, text="Completion Chart")
+            graph_tab.pack_propagate(False) 
+            
             chart_frame = tk.LabelFrame(
-                graph_tab, text="Completion Chart", padx=10, pady=10)
-            chart_frame.pack(fill=tk.BOTH, expand=False, pady=5)
+                graph_tab, text="Completion Chart", padx=10, pady=10, width=480, height=400)
+            chart_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+            chart_frame.pack_propagate(False) 
 
             if is_set:
                 self.chart_frame_set = chart_frame
@@ -619,7 +653,7 @@ class DataFrameViewer(tk.Tk):
         owned_pct = owned_counts / total_counts * 100
         missing_pct = missing_counts / total_counts * 100
 
-        fig, ax = plt.subplots(figsize=(5, max(4, len(group_counts) * 0.6)))
+        fig, ax = plt.subplots(figsize=(4,4))
         ax.barh(group_counts.index, owned_pct, label="Owned", color="#4caf50")
         ax.barh(group_counts.index, missing_pct, left=owned_pct,
                 label="Missing", color="#e57373")
@@ -630,20 +664,23 @@ class DataFrameViewer(tk.Tk):
         ax.legend(loc="lower right")
         plt.tight_layout()
 
-        # Replace the pie chart with the bar chart in the GUI
+        # Replace the chart in the GUI with fixed size
+        chart_frame = self.chart_frame_set if is_set else self.chart_frame
+        chart_canvas = self.chart_canvas_set if is_set else self.chart_canvas
+        
+        if chart_canvas:
+            chart_canvas.get_tk_widget().destroy()
+        
+        new_canvas = FigureCanvasTkAgg(fig, master=chart_frame)
+        new_canvas.draw()
+        new_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        
+        # Store the canvas reference
         if is_set:
-            if getattr(self, "chart_canvas_set", None):
-                self.chart_canvas_set.get_tk_widget().destroy()
-            self.chart_canvas_set = FigureCanvasTkAgg(
-                fig, master=self.chart_frame_set)
-            self.chart_canvas_set.draw()
-            self.chart_canvas_set.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+            self.chart_canvas_set = new_canvas
         else:
-            if getattr(self, "chart_canvas", None):
-                self.chart_canvas.get_tk_widget().destroy()
-            self.chart_canvas = FigureCanvasTkAgg(fig, master=self.chart_frame)
-            self.chart_canvas.draw()
-            self.chart_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+            self.chart_canvas = new_canvas
+        
         plt.close(fig)
 
     def clear_chart(self, is_set=False):
@@ -840,7 +877,7 @@ class DataFrameViewer(tk.Tk):
     def _calculate_pack_probabilities(self, packs, missing_cards, rarity_to_row):
 
         pack_probs = {}
-        prob_matrix = logic.calc_prob()
+        prob_matrix = logic.calc_prob(current_set=self.df['set'].unique()[0])
 
         for pack_info in packs:
             pack_name = pack_info[0]
@@ -859,8 +896,7 @@ class DataFrameViewer(tk.Tk):
                 if row_idx >= len(prob_matrix):
                     continue
                 
-                single_card_factor = 1 / self.df['rarity'].value_counts()[rarity]
-                row_p = 1 - (prob_matrix[rarity] * single_card_factor)
+                row_p = 1 - prob_matrix[rarity]
                 prob = np.concatenate((np.repeat(row_p[0], 3), row_p[1:]))
                 
                 prob_sum += (1 - np.prod(prob))
@@ -872,21 +908,23 @@ class DataFrameViewer(tk.Tk):
     def _display_pack_suggestion(self, pack_probs, is_set=False):
 
         max_prob = max(pack_probs.values())
-        
-        if max_prob > 1:
-            max_prob = 1
-
         best_packs = [p for p, v in pack_probs.items()
                       if abs(v - max_prob) < 1e-8]
         suggestion = ""
 
         if self.df[~self.df.index.isin(self.inventory)].empty:
             suggestion += "You have all cards in your collection.\n"
-        elif len(best_packs) == 1:
-            suggestion += f"Suggestion: Open '{best_packs[0]}' with a probability of {max_prob*100:.2f} % to get a new card.\n"
-        else:
-            suggestion += f"Any pack would, most likely, get you a new card.\n"
 
+        if len(best_packs) == 1:
+            if max_prob > 1:
+                suggestion += f"Suggestion: Open '{best_packs[0]}' pack.\nIt's more likely to get a new card with it!"
+            else:
+                suggestion += f"Suggestion: Open '{best_packs[0]}' pack.\nIt has a probability of {max_prob*100:.2f} % to have a new card.\n"
+        else:
+            suggestion += f"Any pack has the same chance to get you a new card!\n"
+
+            
+        
         self._set_suggestion_label(suggestion.strip(), is_set)
 
     def display_card_image(self, idx, widget):
@@ -913,41 +951,49 @@ class DataFrameViewer(tk.Tk):
         ).start()
 
     def _fetch_and_update_image(self, card_name, card_id, label, card_rarity, is_checked):
-
-        photo = None
-        error_message = None
-
         try:
+            set_name = self.df['set'].dropna().unique()[0]
+            name = set_name.split(' ')[:-1]
+            
             url = img_aqcuisition.get_image(
-                card_name=card_name, card_id=card_id, card_rarity=card_rarity)
-
+                card_name=card_name, card_id=card_id, set_name='_'.join(name), card_rarity=card_rarity)
+            
             if not url:
-                error_message = "No image URL found"
+                error = "No image URL found"
+                image_data = None
             else:
                 response = requests.get(url)
-                image = Image.open(io.BytesIO(response.content))
-                image = image.resize((300, 420), Image.LANCZOS if hasattr(
-                    Image, "LANCZOS") else Image.ANTIALIAS)
-                if not is_checked:
-                    image = image.convert('L')
-                photo = ImageTk.PhotoImage(image)
+                image_data = response.content
+                error = None
         except Exception as e:
-            error_message = f"Image load error: {e}"
-
-        def update_label():
-
-            if error_message:
-                self.set_status_message(error_message)
+            image_data = None
+            self.set_status_message(f"Image load error: {e}")
+        
+        # Schedule the UI update on the main thread
+        def update_ui():
+            if error:
+                self.set_status_message(error)
                 label.config(image="", text="Image not available")
                 label.image = None
-            elif photo:
-                label.config(image=photo, text="")
-                label.image = photo
+            elif image_data:
+                try:
+                    image = Image.open(io.BytesIO(image_data))
+                    image = image.resize((300, 420), Image.LANCZOS if hasattr(
+                        Image, "LANCZOS") else Image.ANTIALIAS)
+                    if not is_checked:
+                        image = image.convert('L')
+                    photo = ImageTk.PhotoImage(image)
+                    label.config(image=photo, text="")
+                    label.image = photo  
+                except Exception as e:
+                    self.set_status_message(f"Image processing error: {e}")
+                    label.config(image="", text="Image processing failed")
+                    label.image = None
             else:
                 label.config(image="", text="Image not available")
                 label.image = None
-
-        self.after(0, update_label)
+        
+        self.after(0, update_ui)
 
     def set_status_message(self, message, timeout=5000):
 

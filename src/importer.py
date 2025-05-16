@@ -1,5 +1,5 @@
 import pandas as pd
-from src.utils import resource_path
+from venv_tcg.utils import resource_path
 
 
 def read_json_file(file_path: str = 'sets/a3-celestial-guardians.json') -> pd.DataFrame:
@@ -9,7 +9,7 @@ def read_json_file(file_path: str = 'sets/a3-celestial-guardians.json') -> pd.Da
 
 def clean_db(data: pd.DataFrame) -> pd.DataFrame:
     data_copy = data.copy()
-    data_copy = data_copy.drop(columns=['subtype', 'health', 'attacks', 'retreatCost', 'weakness',
+    data_copy = data_copy.drop(columns=['health', 'attacks', 'retreatCost', 'weakness',
                                         'abilities', 'evolvesFrom'])
     return data_copy
 

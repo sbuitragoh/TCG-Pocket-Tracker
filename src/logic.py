@@ -1,22 +1,22 @@
 import numpy as np
+import json
 
-
-def calc_prob():
+def calc_prob(current_set):
     
     # regular | god
     prob_pack = [0.9995, 0.0005]
     # Common | Uncommon | Rare | Rare EX | Full Art | Full Art EX/Support | Special Full Art | Immersive | Gold Crown | One shiny star | Two shiny star
-    prob_1to3_reg = [100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    prob_4_reg = [0.0, 89.0, 4.952, 1.666, 2.572,
-                  0.325, 0.175, 0.222, 0.04, 0.714, 0.333]
-    prob_5_reg = [0.0, 56.0, 19.810, 6.664, 10.288,
-                  1.29, 0.71, 0.888, 2.857, 1.333, 0.160]
-    prob_1to5_g = [0.0, 0.0, 0.0, 0.0, 28.571,
-                   21.433, 11.9, 2.380, 2.380, 23.809, 9.523]
+    with open('venv_tcg\prob_set.json', 'r') as f:
+        data = json.load(f)
 
-    p_prob = np.array([prob_1to3_reg, prob_4_reg, prob_5_reg]).T / 100.0
-    p_god = np.array(prob_1to5_g).T / 100.0
-    prob_matrix = prob_pack[0] * p_prob + np.array([prob_pack[1] * p_god]*3).T
+    for d in data:
+        if d['set'] == current_set:
+            prob_imp = np.array(d['prob'])
+
+    
+    p_prob = prob_imp[:, 0:-1] / 100
+    p_god = np.reshape(prob_imp[:, -1] / 100, (-1, 1))
+    prob_matrix = prob_pack[0] * p_prob + np.tile(p_god, (1,3))
     
     prob_dict = {
         'Common':prob_matrix[0],

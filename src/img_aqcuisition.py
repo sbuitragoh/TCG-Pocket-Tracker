@@ -1,9 +1,10 @@
 import requests
 from bs4 import BeautifulSoup
+from urllib.parse import quote
+import re
 
 
 def build_search_url(card_name, card_id, set_name, card_rarity):
-    from urllib.parse import quote
 
     encoded_set = quote(f"({set_name}_{card_id})")
     base_url = f"https://bulbapedia.bulbagarden.net/wiki/{card_name.replace(' ', '_')}_{encoded_set}"
@@ -34,6 +35,10 @@ def extract_image_url(soup, card_name_parsed, card_rarity):
         "One shiny star": "Shiny Rare",
         "Two shiny star": "Shiny Super Rare"
     }
+
+    ## Special symbol case
+    card_name_parsed = re.sub(r"[♂♀]", "", card_name_parsed)
+    card_name_parsed = quote(card_name_parsed)
 
     if card_rarity in rarity_anchors:
         infobox = soup.find(title=rarity_anchors[card_rarity])
