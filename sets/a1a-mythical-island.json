@@ -1893,7 +1893,7 @@
     "weakness": "Fire",
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a1a-076",
@@ -1921,7 +1921,7 @@
     "weakness": "Lightning",
     "abilities": [],
     "evolvesFrom": "Magikarp",
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a1a-077",
@@ -1955,7 +1955,7 @@
     "weakness": "Darkness",
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a1a-078",
@@ -1985,7 +1985,7 @@
       }
     ],
     "evolvesFrom": "Old Amber",
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a1a-079",
@@ -2012,7 +2012,7 @@
     "weakness": "Lightning",
     "abilities": [],
     "evolvesFrom": "Pidgeotto",
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a1a-080",
@@ -2028,7 +2028,7 @@
     "weakness": null,
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a1a-081",
@@ -2044,7 +2044,7 @@
     "weakness": null,
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a1a-082",
@@ -2060,7 +2060,7 @@
     "weakness": null,
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a1a-083",

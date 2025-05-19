@@ -4582,7 +4582,7 @@
     "weakness": "Lightning",
     "abilities": [],
     "evolvesFrom": "Yanma",
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2-181",
@@ -4608,7 +4608,7 @@
     "weakness": "Water",
     "abilities": [],
     "evolvesFrom": "Monferno",
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2-182",
@@ -4643,7 +4643,7 @@
     "weakness": "Lightning",
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2-183",
@@ -4669,7 +4669,7 @@
     "weakness": "Fighting",
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2-184",
@@ -4695,7 +4695,7 @@
     "weakness": "Darkness",
     "abilities": [],
     "evolvesFrom": "Misdreavus",
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2-185",
@@ -4721,7 +4721,7 @@
     "weakness": "Psychic",
     "abilities": [],
     "evolvesFrom": "Kirlia",
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2-186",
@@ -4746,7 +4746,7 @@
     "weakness": "Grass",
     "abilities": [],
     "evolvesFrom": "Sneasel",
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2-187",
@@ -4777,7 +4777,7 @@
       }
     ],
     "evolvesFrom": null,
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2-188",
@@ -4813,7 +4813,7 @@
     "weakness": "Fire",
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2-189",
@@ -4841,7 +4841,7 @@
     "weakness": "Fighting",
     "abilities": [],
     "evolvesFrom": "Lickitung",
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2-190",
@@ -4857,7 +4857,7 @@
     "weakness": null,
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2-191",
@@ -4873,7 +4873,7 @@
     "weakness": null,
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2-192",
@@ -4889,7 +4889,7 @@
     "weakness": null,
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2-193",
@@ -4905,7 +4905,7 @@
     "weakness": null,
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2-194",
@@ -4921,7 +4921,7 @@
     "weakness": null,
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2-195",
@@ -4937,7 +4937,7 @@
     "weakness": null,
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2-196",

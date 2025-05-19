@@ -2009,7 +2009,7 @@
     "weakness": "Fire",
     "abilities": [],
     "evolvesFrom": "Kakuna",
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2b-080",
@@ -2045,7 +2045,7 @@
     "weakness": "Water",
     "abilities": [],
     "evolvesFrom": "Charmeleon",
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2b-081",
@@ -2072,7 +2072,7 @@
     "weakness": "Lightning",
     "abilities": [],
     "evolvesFrom": "Wiglett",
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2b-082",
@@ -2099,7 +2099,7 @@
     "weakness": "Fighting",
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2b-083",
@@ -2132,7 +2132,7 @@
       }
     ],
     "evolvesFrom": null,
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2b-084",
@@ -2159,7 +2159,7 @@
     "weakness": "Psychic",
     "abilities": [],
     "evolvesFrom": "Riolu",
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2b-085",
@@ -2185,7 +2185,7 @@
     "weakness": "Fighting",
     "abilities": [],
     "evolvesFrom": "Paldean Wooper",
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2b-086",
@@ -2212,7 +2212,7 @@
     "weakness": "Fire",
     "abilities": [],
     "evolvesFrom": "Tinkatuff",
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2b-087",
@@ -2240,7 +2240,7 @@
     "weakness": "Fighting",
     "abilities": [],
     "evolvesFrom": "Bidoof",
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2b-088",
@@ -2256,7 +2256,7 @@
     "weakness": null,
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2b-089",
@@ -2272,7 +2272,7 @@
     "weakness": null,
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2b-090",
@@ -2288,7 +2288,7 @@
     "weakness": null,
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2b-091",
@@ -2304,7 +2304,7 @@
     "weakness": null,
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art EX/Support"
+    "rarity": "Full Art EX Support"
   },
   {
     "id": "a2b-092",
@@ -2470,7 +2470,7 @@
     "weakness": "Fire",
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art"
+    "rarity": "One shiny star"
   },
   {
     "id": "a2b-098",
@@ -2495,7 +2495,7 @@
     "weakness": "Fire",
     "abilities": [],
     "evolvesFrom": "Weedle",
-    "rarity": "Full Art"
+    "rarity": "One shiny star"
   },
   {
     "id": "a2b-099",
@@ -2519,7 +2519,7 @@
     "weakness": "Water",
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art"
+    "rarity": "One shiny star"
   },
   {
     "id": "a2b-100",
@@ -2544,7 +2544,7 @@
     "weakness": "Water",
     "abilities": [],
     "evolvesFrom": "Charmander",
-    "rarity": "Full Art"
+    "rarity": "One shiny star"
   },
   {
     "id": "a2b-101",
@@ -2569,7 +2569,7 @@
     "weakness": "Lightning",
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art"
+    "rarity": "One shiny star"
   },
   {
     "id": "a2b-102",
@@ -2597,7 +2597,7 @@
     "weakness": "Lightning",
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art"
+    "rarity": "One shiny star"
   },
   {
     "id": "a2b-103",
@@ -2622,7 +2622,7 @@
     "weakness": "Fighting",
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art"
+    "rarity": "One shiny star"
   },
   {
     "id": "a2b-104",
@@ -2647,7 +2647,7 @@
     "weakness": "Psychic",
     "abilities": [],
     "evolvesFrom": null,
-    "rarity": "Full Art"
+    "rarity": "One shiny star"
   },
   {
     "id": "a2b-105",
