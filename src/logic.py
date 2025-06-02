@@ -13,4 +13,4 @@ def calc_prob(current_set):
     prob_imp = np.array(_DICT_DATA.row(by_predicate=(pl.col('set') == current_set))[1]) / 100
     prob_matrix = _PROB_PACK[0] * prob_imp[:, :-1] + _PROB_PACK[1] * prob_imp[:, -1:]
 
-    return dict(zip(_TYPE_CARDS, prob_matrix))
+    return dict(zip(_TYPE_CARDS, prob_matrix.tolist()))
