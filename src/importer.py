@@ -8,10 +8,3 @@ def read_json_file(file_path: str = 'sets/a3-celestial-guardians.json') -> pl.Da
                                         'abilities', 'evolvesFrom'])
     return df
 
-
-def grouped_data(data: pl.DataFrame, by: str) -> list[pl.DataFrame]:
-    data_copy = data.copy()
-    rarities = data_copy[by].unique()
-    df_grouped = [data_copy[data_copy[by] == rarity].reset_index()
-                  for rarity in rarities]
-    return df_grouped
