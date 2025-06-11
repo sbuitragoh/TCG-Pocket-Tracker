@@ -1,6 +1,7 @@
 from src import importer, logic, img_aqcuisition
 from src.chart_manager import ChartManager
-from src.utils import resource_path
+from src.inventory_calc import InventoryManager
+from src.utils import resource_path, ensure_row_index, safe_str, get_set_df
 import tkinter as tk
 from tkinter import ttk, filedialog
 import polars as pl
@@ -11,14 +12,6 @@ import requests
 import threading
 import json
 import re
-
-def ensure_row_index(df: pl.DataFrame, name: str = "row_idx") -> pl.DataFrame:
-    return df if name in df.columns else df.with_row_index(name=name)
-
-def safe_str(value):
-    if isinstance(value, pl.Series):
-        return str(value.item()) if value.len() > 0 else ""
-    return str(value) if value is not None else ""
 
 
 class CollectionViewer(tk.Tk):
@@ -31,6 +24,7 @@ class CollectionViewer(tk.Tk):
         self._create_menu()
         self._create_widgets()
         self.chart_manager = ChartManager(self.chart_frame)
+        self.inventory_manager = InventoryManager(self.df, self.inventory)
         self.show_dataframe(self.df)
         self.base_dir = pathlib.Path(__file__).resolve().parent
         
@@ -53,7 +47,6 @@ class CollectionViewer(tk.Tk):
         self.current_group = None
         self.inventory = set()
         self.checkbox_vars = {}
-        self.set_completion_rarities = ['Common', 'Uncommon', 'Rare', 'Rare EX']
         self.json_path = resource_path('sets/a3-celestial-guardians.json')
         self.local_image_folder = "img"
         self.sets_folder = 'sets'
@@ -163,9 +156,9 @@ class CollectionViewer(tk.Tk):
 
             self.set_status_message(f'Failed to load inventory: {e}')
 
-    def _read_and_parse_progress_file(self, file_path):
+    def _read_and_parse_progress_file(self, file_path) -> tuple:
 
-        json_path_str = None
+        json_path_str = ""
         indices = set()
 
         try:
@@ -282,7 +275,7 @@ class CollectionViewer(tk.Tk):
         
         for col in self.df.columns:
             tree.heading(col, text=col.capitalize())
-            longest_width = self.df[col].drop_nans().map_elements(len, return_dtype=pl.Int64).max() if not self.df.height > 0 else 10
+            longest_width:int = self.df[col].drop_nans().map_elements(len, return_dtype=pl.Int64).max() if not self.df.height > 0 else 10
             tree.column(col, width=min(longest_width * 20, 150), anchor="center", stretch=False)
 
 
@@ -431,7 +424,7 @@ class CollectionViewer(tk.Tk):
 
     def show_dataframe(self, df):
 
-        set_df = self._get_set_df(df)
+        set_df = get_set_df(df)
         set_df = ensure_row_index(set_df)
         self.set = set(set_df["row_idx"].to_list())
         if not self.is_set:
@@ -509,7 +502,7 @@ class CollectionViewer(tk.Tk):
         self.groups_set = {}
         self.checkbox_vars_all = {}
         self.checkbox_vars_set = {}
-        df = self._get_set_df(self.df) if self.is_set else self.df     
+        df = get_set_df(self.df) if self.is_set else self.df     
         df = ensure_row_index(df)
 
         if value == "Checked":
@@ -525,7 +518,7 @@ class CollectionViewer(tk.Tk):
             grouped = df.group_by(value)
             self.groups_all = self._populate_tree(self.tree, grouped, self.checkbox_vars_all)
 
-            set_df = self._get_set_df(df)
+            set_df = get_set_df(df)
             self.groups_set = set_df.group_by(value)
 
         self.groups = self.groups_all  # Set self.groups after populating
@@ -664,11 +657,6 @@ class CollectionViewer(tk.Tk):
         self._update_inventory_by_pack()
         self.update_pack_suggestion()
 
-    def _get_set_df(self, df:pl.DataFrame) -> pl.DataFrame:
-
-        df = ensure_row_index(df)
-        return df.filter(pl.col('rarity').is_in(self.set_completion_rarities))
-
     ## BAR GRAPH
     def show_group_bar_chart(self):
         group_col = self.group_var.get()
@@ -677,7 +665,7 @@ class CollectionViewer(tk.Tk):
             self.chart_manager.clear_chart()
             return
 
-        df = self._get_set_df(self.df) if self.is_set else self.df
+        df = get_set_df(self.df) if self.is_set else self.df
 
         if group_col not in df.columns:
             self.chart_manager.clear_chart()
@@ -711,55 +699,29 @@ class CollectionViewer(tk.Tk):
         self.chart_manager.bar_chart(labels, owned_pct=owned_pct, missing_pct=missing_pct)
 
     ## UPDATE COMPLETION
-
     def _update_set_completion(self):
+ 
+        df = get_set_df(ensure_row_index(self.df))
+        self.inventory_manager.df = df
+        self.inventory_manager.inventory = self.inventory
+        set_total, set_owned, set_missing = self.inventory_manager._update_completion(df)
+        self.set_comp_label.config(text=f"Minimum Set Completion: {set_owned} / {set_total} (missing: {set_missing})")
+        self._update_set_pack_completion(df)
 
-        if "rarity" in self.df.columns:
-            set_df = self._get_set_df(self.df)
-            owned_set = ensure_row_index(set_df).filter(pl.col("row_idx").is_in(list(self.inventory)))
-            set_total = set_df.height
-            set_owned = owned_set.height
-            set_missing = set_total - set_owned
-            self.set_comp_label.config(text=f"Minimum Set Completion: {set_owned} / {set_total} (missing: {set_missing})")
-            self._update_set_pack_completion(set_df)
-        else:
-            self.set_comp_label.config(text="No rarity data available.")
-            self._clear_set_pack_completion("No rarity data available.", "#e8f5e9")
+    def update_completion(self, df_c: pl.DataFrame, is_set: bool):
 
-    def update_completion(self, df_c: pl.DataFrame, color_c: str):
-        
-        df = ensure_row_index(df_c)
-
-        total_counts = df.group_by('pack').len().rename({'len': 'total'})
-        owned_df = df.filter(pl.col("row_idx").is_in(list(self.inventory)))
-        owned_counts = owned_df.group_by('pack').len().rename({'len': 'owned'})
-
-        joined = (
-            total_counts
-            .join(owned_counts, on="pack", how="left")
-            .with_columns([
-                pl.col("owned").fill_null(0),
-                (pl.col("total") - pl.col("owned")).alias("missing")
-            ])
-            .sort("pack")
-        )
-
-        pack_order = {pack:i for i, pack in enumerate(self.pack_display_order)}
-        joined_rows = sorted(
-            joined.iter_rows(named=True),
-            key=lambda row: pack_order.get(row['pack'], 9999)
-        )
+        joined_rows, color = self.inventory_manager.update_completion(df_c, is_set, self.pack_display_order)
 
         for row in joined_rows:
-            color = color_c if row['missing'] == 0 else "#b9c4ba"
+            color_c = color if row['missing'] == 0 else "#b9c4ba"
             text = f"{row['pack']}: {row['owned']}/{row['total']} \
             (missing: {row['missing'] if row['missing'] != None else row['total']})"
-            if color_c == "#1c9625":
+            if is_set:
                 lbl = tk.Label(self.set_pack_completion_frame, text=text, 
-                           bg=color, font=("Arial", 10), anchor="w")
+                           bg=color_c, font=("Arial", 10), anchor="w")
             else:
                 lbl = tk.Label(self.inv_pack_completion_frame, text=text,
-                        bg=color, font=("Arial", 10), anchor="w")
+                        bg=color_c, font=("Arial", 10), anchor="w")
             lbl.pack(side=tk.TOP, anchor="w", fill=tk.X, padx=2, pady=1)
 
     def _update_set_pack_completion(self, set_df: pl.DataFrame):
@@ -772,23 +734,11 @@ class CollectionViewer(tk.Tk):
             lbl.pack(side=tk.TOP, anchor="w", fill=tk.X, padx=2, pady=1)
             return
 
-        self.update_completion(df_c=set_df, color_c="#1c9625")
-
-    def _clear_set_pack_completion(self, text, bg):
-
-        for widget in self.set_pack_completion_frame.winfo_children():
-            widget.destroy()
-
-        lbl = tk.Label(self.set_pack_completion_frame, text=text, bg=bg)
-        lbl.pack(side=tk.TOP, anchor="w", fill=tk.X, padx=2, pady=1)
-        self.pack_completion_data = []
-        self.update_pack_suggestion()
+        self.update_completion(df_c=set_df, is_set=True)
 
     def _update_inventory_count(self):
 
-        total = len(self.df)
-        owned = len(self.inventory)
-        missing = total - owned
+        total, owned, missing = self.inventory_manager._update_count()
         self.inv_comp_label.config(
             text=f"Inventory: {owned} / {total} (missing: {missing})")
 
@@ -802,11 +752,13 @@ class CollectionViewer(tk.Tk):
             lbl.pack(side=tk.TOP, anchor="w", fill=tk.X, padx=2, pady=1)
             return
 
-        self.update_completion(df_c=self.df, color_c="#2b2ee9")
+        self.update_completion(df_c=self.df, is_set=False)
 
     def update_pack_suggestion(self):
 
-        packs = self._get_incomplete_packs()
+        self.inventory_manager.df = self.df
+        self.inventory_manager.inventory = self.inventory
+        packs = self.inventory_manager._get_incomplete_packs(self.is_set)
 
         if not packs:
             self._set_suggest_label(
@@ -817,26 +769,17 @@ class CollectionViewer(tk.Tk):
             self._set_suggest_label("Pack or rarity data missing.")
             return
 
-        df = self._get_set_df(self.df) if self.is_set else self.df
-        df = ensure_row_index(df)
-        relevant_indices = self.set if self.is_set else set(df["row_idx"].to_list())
-
-        missing_cards = df.filter(
-            (~pl.col("row_idx").is_in(self.inventory)) &
-            (pl.col("row_idx").is_in(list(relevant_indices))) &
-            pl.col("rarity").is_not_null() &
-            pl.col("pack").is_not_null()
-        )
-
-        pack_probs = self._calculate_pack_probabilities(
-            packs, missing_cards)
+        missing_cards = self.inventory_manager._update_suggestion(self.is_set)
+        prob_matrix = logic.calc_prob(current_set=self.df['set'].unique()[0])
+        pack_probs = self.inventory_manager._calculate_pack_probabilities(packs, missing_cards, prob_matrix)
 
         if not pack_probs:
             self._set_suggest_label(
                 "No probability data available.")
             return
 
-        self._display_pack_suggestion(pack_probs)
+        suggestion = self.inventory_manager._display_pack_suggestion(pack_probs)
+        self._set_suggest_label(suggestion.strip())
 
     def _set_suggest_label(self, text):
         if self.is_set:
@@ -846,97 +789,7 @@ class CollectionViewer(tk.Tk):
             self.suggest_label.config(text=text)
             self.suggest_label_set.config(text="")
 
-    def _get_incomplete_packs(self):
-        
-        df = self._get_set_df(self.df) if self.is_set else self.df
-        df = ensure_row_index(df)
-
-        if "pack" not in df.columns:
-            return []
-
-        pack_counts = df["pack"].value_counts()
-        owned_packs = (
-            df
-            .filter(pl.col('row_idx').is_in(self.inventory))['pack']
-            .value_counts()
-        )
-
-        incomplete_df = (
-            pack_counts.join(owned_packs, on='pack', how='left', suffix='_owned')
-            .with_columns([
-                pl.col('count_owned').fill_null(0).alias('owned'),
-                pl.col('count').alias('total')
-            ])
-            .with_columns([
-                (pl.col('total') - pl.col('owned')).alias('missing')
-            ])
-            .filter(
-                (pl.col('pack') != 'Both') &
-                (pl.col('missing') > 0)
-            )
-            .select(['pack', 'owned', 'total', 'missing'])
-        )
-
-        incomplete = incomplete_df.rows()
-
-        return incomplete
-
-    def _calculate_pack_probabilities(self, packs, missing_cards):
-
-        pack_probs = {}
-        prob_matrix = logic.calc_prob(current_set=self.df['set'].unique()[0])
-
-        for pack_info in packs:
-
-            pack_name = pack_info[0]
-            filtered = missing_cards.filter(
-                (pl.col("pack") == pack_name) | (pl.col("pack") == "Both")
-            ).select("rarity")
-
-            if filtered.height == 0:
-                pack_probs[pack_name] = 0.0
-            else:
-                prob_seted = filtered.with_columns(
-                    (pl.col('rarity').replace_strict(prob_matrix)).alias('rar_prob')
-                ).with_columns(
-                    pl.col('rar_prob').list.to_struct(fields=['P_123', 'P_4', 'P_5'])
-                ).unnest('rar_prob').with_columns([(
-                    (1 - ((1-pl.col('P_123'))**3 * (1-pl.col('P_4')) * (1-pl.col('P_5'))))
-                    .cast(pl.Decimal(precision=20, scale=15))
-                    .alias('P')
-                )]).select(
-                    pl.sum('P')
-                ).item()
-                pack_probs[pack_name] = float(prob_seted)
-
-        return pack_probs
-
     ## DISPLAY AND DOWNLOAD
-
-    def _display_pack_suggestion(self, pack_probs):
-
-        max_prob = max(pack_probs.values())
-        best_packs = [p for p, v in pack_probs.items()
-                      if abs(v - max_prob) < 1e-8]
-        suggestion = ""
-
-        df = ensure_row_index(self.df)
-        missing_df = df.filter(~pl.col("row_idx").is_in(list(self.inventory)))
-        if missing_df.is_empty():
-            suggestion += "You have all cards in your collection.\n"
-
-        if len(best_packs) == 1:
-            max_prob = 1 if max_prob > 1 else max_prob 
-            if max_prob == 1:
-                suggestion += f"Suggestion: Open '{best_packs[0]}' pack.\nIt's more likely to get a new card with it!"
-            else:
-                suggestion += f"Suggestion: Open '{best_packs[0]}' pack.\nIt has a probability of {max_prob*100:.2f} % to have a new card.\n"
-        else:
-            suggestion += f"Any pack has the same chance to get you a new card!\n"
-
-            
-        
-        self._set_suggest_label(suggestion.strip())
 
     def _download_all_set_images_with_progress(self, progress_var, progress_label, top):
         """Downloads all card images from JSON files in the 'sets' folder and updates the progress bar."""
