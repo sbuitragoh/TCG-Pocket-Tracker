@@ -2,6 +2,7 @@
 
 Simple project to track the collection inside TCG Pocket.
 Works with:
+- A3a. Extradimensional Crisis
 - A3. Celestial Guardians
 - A2b. Shining Revelry
 - A2a. Triumphant Light
@@ -11,7 +12,6 @@ Works with:
 
 ## Roadmap
 
-- Updating A3a
 - Tool to update new sets into the format required
 - Porting GUI to PySide6 including:
     - Dark Mode

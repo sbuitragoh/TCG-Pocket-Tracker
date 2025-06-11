@@ -5,11 +5,12 @@ import re
 
 
 def build_search_url(card_name, card_id, set_name, card_rarity):
-
-    set_name = set_name.split('(')[0].replace(" ","_")
+    set_name = set_name.split("(")[0].replace(" ", "_")
+    if set_name[-1] == "_":
+        set_name = set_name[:-1]
     encoded_set = quote(f"({set_name}_{card_id})")
     base_url = f"https://bulbapedia.bulbagarden.net/wiki/{card_name.replace(' ', '_')}_{encoded_set}"
-    
+
     rarity_anchors = {
         "Full Art": "#Illustration_Rare-0",
         "Full Art EX Support": "#Super_Rare-0",
@@ -17,17 +18,16 @@ def build_search_url(card_name, card_id, set_name, card_rarity):
         "Immersive": "#Immersive-0",
         "Gold Crown": "#Ultra_Rare-0",
         "One shiny star": "#Shiny_Rare-0",
-        "Two shiny star": "#Shiny_Super_Rare-0"
+        "Two shiny star": "#Shiny_Super_Rare-0",
     }
 
     if card_rarity in rarity_anchors:
         base_url += rarity_anchors[card_rarity]
 
-    return base_url
+    return base_url, encoded_set
 
 
-def extract_image_url(soup, card_name_parsed, card_rarity):
-
+def extract_image_url(soup, card_name_parsed, card_rarity, encoded_name):
     rarity_anchors = {
         "Full Art": "Illustration Rare",
         "Full Art EX Support": "Super Rare",
@@ -35,7 +35,7 @@ def extract_image_url(soup, card_name_parsed, card_rarity):
         "Immersive": "Immersive",
         "Gold Crown": "Ultra Rare",
         "One shiny star": "Shiny Rare",
-        "Two shiny star": "Shiny Super Rare"
+        "Two shiny star": "Shiny Super Rare",
     }
 
     ## Special symbol case
@@ -45,10 +45,9 @@ def extract_image_url(soup, card_name_parsed, card_rarity):
         infobox = soup.find(title=rarity_anchors[card_rarity])
     else:
         infobox = soup.find(title=card_rarity)
-    
+
     if not infobox:
-        infobox = soup.find(
-            "a", href=lambda href: href and card_name_parsed in href)
+        infobox = soup.find("a", href=lambda href: href and encoded_name in href)
 
     if infobox:
         img = infobox.find("img")
@@ -63,19 +62,18 @@ def extract_image_url(soup, card_name_parsed, card_rarity):
 
 
 def get_image(card_name, card_id, set_name="Celestial_Guardians", card_rarity=None):
-    
     card_name_parsed = card_name.replace(" ", "")
-    search_url = build_search_url(card_name, card_id, set_name, card_rarity)
+    search_url, encoded_set = build_search_url(card_name, card_id, set_name, card_rarity)
     headers = {"User-Agent": "Mozilla/5.0"}
     response = requests.get(search_url, headers=headers)
 
     if response.status_code != 200:
-
         fallback_url = f"https://bulbapedia.bulbagarden.net/wiki/{card_name.replace(' ', '_')}_(TCG_Pocket)"
         response = requests.get(fallback_url, headers=headers)
         if response.status_code != 200:
             return None
 
     soup = BeautifulSoup(response.text, "html.parser")
-    img_url = extract_image_url(soup, card_name_parsed, card_rarity)
+    encoded_name = encoded_set[3:-3].replace("_", "")
+    img_url = extract_image_url(soup, card_name_parsed, card_rarity, encoded_name)
     return img_url
